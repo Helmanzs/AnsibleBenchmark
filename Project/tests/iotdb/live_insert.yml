@@ -1,0 +1,196 @@
+---
+# tests/iotdb/live_insert.yml
+
+- name: Set live_insert defaults
+  ansible.builtin.set_fact:
+    workers: "{{ workers | default(4) | int }}"
+    duration: "{{ duration | default(60) | int }}"
+    batch_size: "{{ batch_size | default(500) | int }}"
+    ts_step_ms: "{{ ts_step_ms | default(100) | int }}"
+
+- name: Stop DataNode
+  ansible.builtin.service:
+    name: datanode
+    state: stopped
+  become: true
+
+- name: Stop ConfigNode
+  ansible.builtin.service:
+    name: confignode
+    state: stopped
+  become: true
+
+- name: Wait for DataNode/ConfigNode ports to be released
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ item }}"
+    state: stopped
+    timeout: 30
+  loop:
+    - "{{ db_port }}"
+    - "{{ confignode_port | default(10710) }}"
+  ignore_errors: true
+
+- name: Force-kill any lingering IoTDB JVM processes
+  ansible.builtin.shell: |
+    pkill -9 -f "[o]rg.apache.iotdb"
+  args:
+    executable: /bin/bash
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Remove IoTDB data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /data/iotdb
+    - /iotdb/data
+    - /iotdb/logs
+    - /iotdb/confignode
+    - /iotdb/datanode
+    - /tmp/failed_rows
+    - /tmp/failed_rows_seed
+  become: true
+  ignore_errors: true
+
+- name: Flush OS caches and sync filesystem
+  ansible.builtin.shell: |
+    sync
+    echo 3 > /proc/sys/vm/drop_caches
+  args:
+    executable: /bin/bash
+  become: true
+  register: drop_caches_result
+  failed_when: false
+  changed_when: drop_caches_result.rc == 0
+
+- name: Recreate required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /data/iotdb
+    - /iotdb/data
+    - /iotdb/logs
+  become: true
+
+- name: Start ConfigNode
+  ansible.builtin.service:
+    name: confignode
+    state: started
+  become: true
+
+- name: Start DataNode
+  ansible.builtin.service:
+    name: datanode
+    state: started
+  become: true
+
+- name: Wait for IoTDB to accept client connections
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ db_port }}"
+    state: started
+    delay: 2
+    timeout: 60
+
+- name: Confirm IoTDB is ready to serve queries
+  ansible.builtin.command: >
+    /iotdb/sbin/start-cli.sh -h 127.0.0.1 -p {{ db_port }}
+    -u {{ db_user }} -pw {{ db_password }} -e "SHOW VERSION"
+  register: iotdb_ready_check
+  retries: 10
+  delay: 3
+  until: iotdb_ready_check.rc == 0
+  changed_when: false
+
+- name: Ensure benchmark directory exists on VM
+  ansible.builtin.file:
+    path: /opt/bench
+    state: directory
+  register: bench_dir
+
+- name: Deploy shared benchmark files to VM
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ bench_dir.path }}/"
+  loop:
+    - "{{ project_root }}/tests/generate_live_data.py"
+    - "{{ project_root }}/tests/runner.py"
+    - "{{ project_root }}/tests/base_driver.py"
+
+- name: Deploy {{ database }} driver to VM
+  ansible.builtin.copy:
+    src: "{{ project_root }}/tests/{{ database }}/driver.py"
+    dest: "{{ bench_dir.path }}/driver.py"
+
+- name: Ensure requests is installed on VM
+  ansible.builtin.pip:
+    name: requests
+    executable: pip3
+  environment:
+    PIP_BREAK_SYSTEM_PACKAGES: "1"
+
+- name: Build vehicle-id list for all workers
+  ansible.builtin.set_fact:
+    all_vehicle_ids: >-
+      {%- set ids = [] -%}
+      {%- for w in range(workers | int) -%}
+        {%- for v in range(10) -%}
+          {{ ids.append((w * 10 + 200 + v) | string) }}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ ids | join(',') }}
+
+- name: Run live insert benchmark
+  ansible.builtin.command: >
+    python3 {{ bench_dir.path }}/runner.py
+    --driver-path {{ bench_dir.path }}/driver.py
+    --host localhost
+    --port 18080
+    --table root.live_test
+    --database ""
+    --user {{ db_user }}
+    --password {{ db_password }}
+    --duration {{ duration }}
+    --workers {{ workers }}
+    --batch-size {{ batch_size }}
+    --seed 42
+    --vehicle-ids "{{ all_vehicle_ids }}"
+    --ts-step-ms {{ ts_step_ms }}
+    --output {{ bench_dir.path }}/live_result.json
+  register: bench_run
+
+- name: Load benchmark JSON results
+  ansible.builtin.slurp:
+    src: "{{ bench_dir.path }}/live_result.json"
+  register: bench_result_b64
+
+- name: Decode benchmark results
+  ansible.builtin.set_fact:
+    bench_result: "{{ bench_result_b64.content | b64decode | from_json }}"
+
+- name: Set facts for common-post-processing
+  ansible.builtin.set_fact:
+    start_datetime: "{{ bench_result.start_datetime }}"
+    end_datetime: "{{ bench_result.end_datetime }}"
+    rows_returned: "{{ bench_result.total_rows }}"
+    query_duration_ms: "{{ bench_result.query_duration_sec }}"
+    worker_stats: "{{ bench_result.worker_stats }}"
+    avg_p50_latency_ms: >-
+      {{
+        (
+          (bench_result.worker_results | map(attribute='p50_latency_ms') | map('float') | sum)
+          / (bench_result.worker_results | length)
+        ) | round(3)
+      }}
+    avg_p99_latency_ms: >-
+      {{
+        (
+          (bench_result.worker_results | map(attribute='p99_latency_ms') | map('float') | sum)
+          / (bench_result.worker_results | length)
+        ) | round(3)
+      }}

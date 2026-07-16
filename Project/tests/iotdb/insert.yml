@@ -1,0 +1,208 @@
+---
+- name: Read VM config file
+  ansible.builtin.slurp:
+    src: /etc/vm_config.json
+  register: vm_config_raw
+
+- name: Parse JSON config
+  ansible.builtin.set_fact:
+    vm_config: "{{ vm_config_raw.content | b64decode | from_json }}"
+
+- name: Set CPU and RAM limits from VM config
+  ansible.builtin.set_fact:
+    cpu_limit: "{{ vm_config.cpu_limit }}"
+    ram_limit: "{{ vm_config.ram_limit }}"
+
+- name: Stop DataNode
+  ansible.builtin.service:
+    name: datanode
+    state: stopped
+  become: true
+
+- name: Stop ConfigNode
+  ansible.builtin.service:
+    name: confignode
+    state: stopped
+  become: true
+
+- name: Wait for DataNode/ConfigNode ports to be released
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ item }}"
+    state: stopped
+    timeout: 30
+  loop:
+    - "{{ db_port }}"
+    - "{{ confignode_port | default(10710) }}"
+  ignore_errors: true
+
+- name: Force-kill any lingering IoTDB JVM processes
+  ansible.builtin.shell: |
+    pkill -9 -f "[o]rg.apache.iotdb"
+  args:
+    executable: /bin/bash
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Remove IoTDB data directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /data/iotdb
+    - /iotdb/data
+    - /iotdb/logs
+    - /iotdb/confignode
+    - /iotdb/datanode
+    - /tmp/failed_rows
+    - /tmp/failed_rows_seed
+  become: true
+  ignore_errors: true
+
+- name: Flush OS caches and sync filesystem
+  ansible.builtin.shell: |
+    sync
+    echo 3 > /proc/sys/vm/drop_caches
+  args:
+    executable: /bin/bash
+  become: true
+  register: drop_caches_result
+  failed_when: false
+  changed_when: drop_caches_result.rc == 0
+
+- name: Recreate required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /data/iotdb
+    - /iotdb/data
+    - /iotdb/logs
+  become: true
+
+- name: Start ConfigNode
+  ansible.builtin.service:
+    name: confignode
+    state: started
+  become: true
+
+- name: Start DataNode
+  ansible.builtin.service:
+    name: datanode
+    state: started
+  become: true
+
+- name: Wait for IoTDB to accept client connections
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ db_port }}"
+    state: started
+    delay: 2
+    timeout: 60
+
+- name: Confirm IoTDB is ready to serve queries
+  ansible.builtin.command: >
+    /iotdb/sbin/start-cli.sh -h 127.0.0.1 -p {{ db_port }}
+    -u {{ db_user }} -pw {{ db_password }} -e "SHOW VERSION"
+  register: iotdb_ready_check
+  retries: 10
+  delay: 3
+  until: iotdb_ready_check.rc == 0
+  changed_when: false
+
+- name: Copy data
+  ansible.builtin.copy:
+    src: "{{ ansible_role_dir }}/{{ vm_name }}/files/{{ data_tar }}"
+    dest: "{{ import_dir }}/{{ data_tar }}"
+    mode: "0644"
+  become: true
+
+- name: Extract data
+  ansible.builtin.shell: |
+    tar --extract --use-compress-program=pigz \
+    --file="{{ import_dir }}/{{ data_tar }}" \
+    --directory="{{ import_dir }}"
+    rm -f "{{ import_dir }}/{{ data_tar }}"
+    chmod -R 0644 "{{ import_dir }}"
+  args:
+    executable: /bin/bash
+  changed_when: true
+  become: true
+
+- name: Extract one seed row per unique device for schema warm-up
+  ansible.builtin.shell: |
+    python3 -c "
+    import csv
+    seen = set()
+    with open('{{ import_dir }}/{{ data_file }}', newline='') as f, \
+        open('{{ import_dir }}/schema_seed.csv', 'w', newline='') as out:
+        reader = csv.reader(f)
+        writer = csv.writer(out)
+        header = next(reader)
+        writer.writerow(header)
+        device_idx = header.index('device')
+        for row in reader:
+            d = row[device_idx]
+            if d not in seen:
+                seen.add(d)
+                writer.writerow(row)
+    print(f'Found {len(seen)} unique devices for schema warm-up')
+    "
+  args:
+    executable: /bin/bash
+  register: seed_extract
+  changed_when: true
+
+- name: Warm up schema
+  ansible.builtin.command: >
+    /iotdb/tools/import-data.sh
+    -ft csv -h {{ db_host }} -p {{ db_port }}
+    -u {{ db_user }} -pw {{ db_password }}
+    -s "{{ import_dir }}/schema_seed.csv"
+    -fd /tmp/failed_rows_seed/
+    -aligned true -tn {{ cpu_limit }} -tz +02:00
+  register: schema_warmup
+  changed_when: true
+
+- name: Set start datetime fact (timestamp only, not used for duration)
+  ansible.builtin.set_fact:
+    start_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Import data
+  ansible.builtin.shell: |
+    /usr/bin/time -f "DURATION_SECONDS=%e" \
+    /iotdb/tools/import-data.sh \
+      -ft csv \
+      -h {{ db_host }} \
+      -p {{ db_port }} \
+      -u {{ db_user }} \
+      -pw {{ db_password }} \
+      -s "{{ import_dir }}/{{ data_file }}" \
+      -fd /tmp/failed_rows/ \
+      -aligned true \
+      -batch {{ import_batch_size | default(100000) }} \
+      -tn {{ cpu_limit }} \
+      -tz +02:00
+  args:
+    executable: /bin/bash
+  register: query_execution
+  changed_when: true
+
+- name: Set end datetime fact (timestamp only, not used for duration)
+  ansible.builtin.set_fact:
+    end_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Remove data file
+  ansible.builtin.file:
+    path: "{{ import_dir }}/{{ data_file }}"
+    state: absent
+
+- name: Remove schema warm-up seed file and failed-rows dir
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ import_dir }}/schema_seed.csv"
+    - /tmp/failed_rows_seed

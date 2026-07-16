@@ -1,0 +1,22 @@
+\chapter{Závěr}
+Cílem této bakalářské práce bylo porovnat vybrané databázové systémy z hlediska jejich vhodnosti pro ukládání a zpracování časových řad, a to jak z teoretického, tak z praktického hlediska, a na základě tohoto porovnání formulovat doporučení pro výběr vhodného systému.
+
+V teoretické části práce byla nejprve charakterizována podstata časových řad a přístupy k jejich ukládání, dále byly představeny základní typy databázových systémů (relační, dokumentové, sloupcové, párů klíč-hodnota a grafové) společně s jejich vnitřními datovými strukturami, zejména B-Tree a LSM stromem. 
+Následně byly popsány dostupné nástroje a technologie použité pro přípravu testovacího prostředí: virtualizační a kontejnerizační platformy, orchestrační nástroje pro automatizaci konfigurace a monitorovací systémy.
+
+V praktické části bylo vybráno osm databázových systémů: Apache IoTDB, ClickHouse, InfluxDB 3, MariaDB, MariaDB ColumnStore, MongoDB, QuestDB a TimescaleDB. Tyto databázové systémy reprezentují různé přístupy k ukládání dat. 
+Pro jejich porovnání bylo pomocí nástroje Ansible vytvořeno automatizované a reprodukovatelné testovací prostředí, ve kterém byly systémy nasazeny za srovnatelných podmínek na reálném datasetu poskytnutém Datovým centrem Ústeckého kraje. 
+Systémy byly otestovány na třech hardwarových profilech sadou testů zaměřených na vkládání, bodové čtení, filtrování podle podmínky, agregaci a kontinuální (živý) zápis dat, přičemž průběh testů byl souběžně monitorován z hlediska využití CPU, paměti a diskových operací.
+
+Z výsledků vyplynulo, že nejlépe si ve výkonnostních testech vedl ClickHouse, který dosáhl nejlepších nebo téměř nejlepších výsledků napříč všemi profily i typy dotazů, a to při současně nejjednodušší instalaci ze všech testovaných systémů, permisivní licenci Apache 2.0 a nativní podpoře horizontálního škálování. 
+Jako nejsilnější alternativu lze označit TimescaleDB, který na výkonnějším hardwarovém profilu při kontinuálním zápisu ClickHouse dokonce mírně předčil a jako jediný ze všech systémů vykazoval u čtecích operací minimální citlivost na navýšení hardwarových prostředků. 
+Naopak nejhorších výsledků v klasických testech dosahovalo MongoDB a nejnáročnější na instalaci a konfiguraci byla Apache IoTDB.
+
+Na základě provedeného srovnání lze pro zpracování časových řad v prostředí Datového centra Ústeckého kraje jako celkově nejvhodnější doporučit databázový systém ClickHouse. 
+Pokud by však konkrétní nasazení kladlo důraz spíše na časté zápisy menších objemů dat, například z jednotlivých IoT zařízení, představuje vhodnou alternativu TimescaleDB.
+
+Je třeba zdůraznit, že uvedené závěry vycházejí z konkrétního datasetu telemetrie vozidel správy a údržby silnic a z testovacích scénářů navržených pro tento konkrétní případ užití, a proto je nelze bez dalšího zobecňovat na jakékoliv nasazení. 
+Práce se rovněž omezila na open-source edice testovaných systémů, jednouzlové nasazení bez replikace či clusteringu a na testovací prostředí realizované formou LXD kontejnerů. 
+Případné navazující práce by se mohly zaměřit na ověření chování systémů v distribuovaném nasazení, na porovnání komerčních Enterprise edic nebo na otestování dalších typů datových sad s odlišnou charakteristikou zápisu a čtení.
+
+Cíle stanovené v úvodu práce byly naplněny. Byla vytvořena funkční automatizovaná testovací infrastruktura, byly provedeny a vyhodnoceny výkonnostní testy osmi databázových systémů a na základě získaných výsledků bylo formulováno jak konkrétní doporučení, tak obecnější kritéria pro výběr databázového systému vhodného pro zpracování časových řad.

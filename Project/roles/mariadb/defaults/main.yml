@@ -1,0 +1,32 @@
+---
+import_dir: "/tmp"
+socket: "/var/run/mysqld/mysqld.sock"
+
+vm_name: mariadb
+vm_packages:
+  - python3-pymysql
+  - libmariadb-dev
+
+sysctl_vm_swappiness: 1
+sysctl_net_core_rmem_max: 16777216
+sysctl_net_core_wmem_max: 16777216
+sysctl_net_ipv4_tcp_rmem: "4096 87380 16777216"
+sysctl_net_ipv4_tcp_wmem: "4096 65536 16777216"
+sysctl_net_ipv4_tcp_no_metrics_save: 1
+sysctl_net_core_netdev_max_backlog: 2500
+
+vm_disk_size: 8GB
+vm_profiles: "{{ lxd_profiles_base }}"
+
+data_file: "raltra.csv"
+
+db_version: 11.8
+db_key_url: "https://mariadb.org/mariadb_release_signing_key.asc"
+db_download_url: "https://r.mariadb.com/downloads/mariadb_repo_setup"
+db_checksum: "sha256:c4a0f3dade02c51a6a28ca3609a13d7a0f8910cccbb90935a2f218454d3a914a"
+db_database: raltra
+db_table: car_telemetry
+db_host: localhost
+db_user: root
+db_password: ""
+db_port: 3306

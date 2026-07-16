@@ -1,0 +1,28 @@
+---
+- name: Set stable VM name
+  ansible.builtin.set_fact:
+    target_vm_name: "{{ vm_name }}"
+
+- block:
+    - name: Start LXD Instance(s)
+      community.general.lxd_container:
+        name: "{{ target_vm_name }}"
+        state: started
+        type: "{{ lxd_container_type | default('virtual-machine') }}"
+
+    - name: Wait for SSH to become available
+      ansible.builtin.wait_for_connection:
+        timeout: "{{ lxd_ssh_timeout | default(120) }}"
+      when: ansible_connection == 'ssh'
+
+    - name: Gather facts for first time
+      ansible.builtin.setup:
+      when: ansible_connection == 'ssh'
+
+  rescue:
+    - name: Failed to start VM, creating VM instead
+      ansible.builtin.include_role:
+        name: common-create
+      vars:
+        vm_name: "{{ target_vm_name }}"
+        vm_ip: "{{ hostvars[target_vm_name]['ansible_host'] }}"

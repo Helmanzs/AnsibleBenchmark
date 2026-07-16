@@ -1,0 +1,16 @@
+[Unit]
+Description=InfluxDB 3 Service
+After=network.target
+
+[Service]
+User=root
+ExecStart=/opt/influxdb3/influxdb3 serve \
+  --node-id={{ node_id | default('node0') }} \
+  --http-bind=0.0.0.0:{{ db_port }} \
+  --object-store=file \
+  --data-dir /var/lib/influxdb3/data \
+  --max-http-request-size={{ influxdb_max_http_request_size | default(104857600) }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,29 @@
+- name: Set query facts
+  ansible.builtin.set_fact:
+    vehicle_id: "186"
+    target_timestamp: "2024-12-02 17:52:54"
+    clickhouse_query_id: "ansible-single-point-{{ ansible_date_time.epoch }}"
+
+- name: Set start datetime fact
+  ansible.builtin.set_fact:
+    start_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Perform indexed lookup
+  ansible.builtin.shell: |
+    clickhouse-client \
+      --query_id="{{ clickhouse_query_id }}" \
+      --query="SELECT * FROM {{ db_table }}
+              WHERE VehicleID = '{{ vehicle_id }}'
+              AND GpsTime = toDateTime('{{ target_timestamp }}');"
+  register: query_execution
+  changed_when: false
+
+- name: Set end datetime fact
+  ansible.builtin.set_fact:
+    end_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Get Query Timing
+  ansible.builtin.include_tasks: helper/get_query_timing.yml
+  vars:
+    max_attempts: 6
+    retry_delay: 5

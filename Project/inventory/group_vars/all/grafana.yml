@@ -1,0 +1,23 @@
+---
+grafana_deployment_env: "{{ deployment_env | default(inventory_file | basename) }}"
+
+grafana_host: >-
+  {{
+    grafana_tokens[grafana_deployment_env].grafana_host
+    if grafana_deployment_env in grafana_tokens
+    else (hostvars['grafana']['ansible_host'] | default('127.0.0.1'))
+  }}
+
+grafana_port: >-
+  {{
+    grafana_tokens[grafana_deployment_env].grafana_port
+    if grafana_deployment_env in grafana_tokens
+    else 3000
+  }}
+
+grafana_api_token: >-
+  {{
+    grafana_tokens[grafana_deployment_env].grafana_api_token
+    if grafana_deployment_env in grafana_tokens
+    else lookup('env', 'GRAFANA_API_TOKEN')
+  }}

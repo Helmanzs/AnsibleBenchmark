@@ -1,0 +1,33 @@
+---
+import_dir: "/tmp"
+temp_dir: "/tmp/{{ data_file_name }}_temp"
+
+sysctl_vm_swappiness: "0"
+sysctl_net_core_somaxconn: "65535"
+
+vm_name: iotdb
+vm_packages:
+  - openjdk-17-jdk
+  - unzip
+vm_disk_size: 16GB
+vm_profiles: "{{ lxd_profiles_base }}"
+
+vm_file_limits: |
+  * soft nofile 65535
+  * hard nofile 65535
+
+vm_openjdk_path: "/usr/lib/jvm/java-17-openjdk-amd64"
+
+data_file: "raltra.csv"
+
+db_user: root
+db_password: root
+db_version: "2.0.8"
+db_zip_url: "https://archive.apache.org/dist/iotdb/2.0.8/apache-iotdb-2.0.8-all-bin.zip"
+db_host: 127.0.0.1
+db_port: 6667
+
+iotdb_cluster_name: perfTestCluster
+iotdb_cn_internal_address: localhost
+iotdb_dn_rpc_address: 0.0.0.0
+iotdb_dn_internal_address: localhost

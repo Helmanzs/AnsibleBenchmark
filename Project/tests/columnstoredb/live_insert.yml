@@ -1,0 +1,106 @@
+---
+- name: Set live_insert defaults
+  ansible.builtin.set_fact:
+    workers: "{{ workers | default(1) | int }}"
+    duration: "{{ duration | default(60) | int }}"
+    batch_size: "{{ batch_size | default(5000) | int }}"
+    ts_step_ms: "{{ ts_step_ms | default(100) | int }}"
+
+- name: Ensure benchmark directory exists on VM
+  ansible.builtin.file:
+    path: /opt/bench
+    state: directory
+    mode: "0755"
+
+- name: Deploy shared benchmark files to VM
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /opt/bench/
+    mode: "0644"
+  loop:
+    - "{{ project_root }}/tests/generate_live_data.py"
+    - "{{ project_root }}/tests/runner.py"
+    - "{{ project_root }}/tests/base_driver.py"
+
+- name: Deploy {{ database }} driver to VM
+  ansible.builtin.copy:
+    src: "{{ project_root }}/tests/{{ database }}/driver.py"
+    dest: /opt/bench/driver.py
+    mode: "0644"
+
+- name: Ensure pip is available
+  ansible.builtin.apt:
+    name: python3-pip
+    state: present
+  become: true
+
+- name: Ensure pymysql is installed on VM
+  ansible.builtin.pip:
+    name: pymysql
+    executable: pip3
+  environment:
+    PIP_BREAK_SYSTEM_PACKAGES: "1"
+
+- name: Build vehicle-id list for all workers
+  ansible.builtin.set_fact:
+    all_vehicle_ids: "{{ range(200, 200 + (workers | int) * 10) | map('string') | join(',') }}"
+
+- name: Clear table before import
+  community.mysql.mysql_query:
+    login_unix_socket: "{{ socket }}"
+    login_db: "{{ db_database }}"
+    query: "TRUNCATE TABLE {{ db_table }};"
+  register: query_result
+  become: true
+
+- name: Run live insert benchmark
+  ansible.builtin.command: >
+    timeout {{ (duration | int) + 30 }}
+    python3 /opt/bench/runner.py
+    --driver-path /opt/bench/driver.py
+    --host localhost
+    --port {{ db_port }}
+    --table {{ db_table }}
+    --database {{ db_database }}
+    --user {{ db_user }}
+    --password '{{ db_password }}'
+    --duration {{ duration }}
+    --workers {{ workers }}
+    --batch-size {{ batch_size }}
+    --seed 42
+    --vehicle-ids "{{ all_vehicle_ids }}"
+    --ts-step-ms {{ ts_step_ms }}
+    --output /opt/bench/live_result.json
+  register: bench_run
+  changed_when: true
+
+- name: Load benchmark JSON results
+  ansible.builtin.slurp:
+    src: /opt/bench/live_result.json
+  register: bench_result_b64
+
+- name: Decode benchmark results
+  ansible.builtin.set_fact:
+    bench_result: "{{ bench_result_b64.content | b64decode | from_json }}"
+
+- name: Set facts for common-post-processing
+  ansible.builtin.set_fact:
+    start_datetime: "{{ bench_result.start_datetime }}"
+    end_datetime: "{{ bench_result.end_datetime }}"
+    rows_returned: "{{ bench_result.total_rows }}"
+    query_duration_ms: "{{ bench_result.query_duration_sec }}"
+    worker_stats: "{{ bench_result.worker_stats }}"
+    avg_p50_latency_ms: >-
+      {{
+        (
+          (bench_result.worker_results | map(attribute='p50_latency_ms') | map('float') | sum)
+          / (bench_result.worker_results | length)
+        ) | round(3)
+      }}
+    avg_p99_latency_ms: >-
+      {{
+        (
+          (bench_result.worker_results | map(attribute='p99_latency_ms') | map('float') | sum)
+          / (bench_result.worker_results | length)
+        ) | round(3)
+      }}

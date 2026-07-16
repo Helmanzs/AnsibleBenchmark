@@ -1,0 +1,58 @@
+---
+- name: Wait for MariaDB to start
+  ansible.builtin.wait_for:
+    path: "{{ socket }}"
+    state: present
+    timeout: 60
+
+- name: Set start datetime fact
+  ansible.builtin.set_fact:
+    start_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Perform aggregate query - avg and max speed per car over fixed 1-hour window
+  community.mysql.mysql_query:
+    login_unix_socket: "{{ socket }}"
+    login_db: "{{ db_database }}"
+    query: >
+      SELECT
+        VehicleID,
+        CAST(AVG(SpeedGps) AS DOUBLE) AS avg_speed,
+        CAST(MAX(SpeedGps) AS DOUBLE) AS max_speed,
+        COUNT(*) AS record_count
+      FROM {{ db_table }}
+      WHERE GpsTime BETWEEN '2024-12-04 05:40:11' AND '2024-12-04 06:40:11'
+      GROUP BY VehicleID
+      ORDER BY VehicleID
+  register: _query_raw
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Register query execution in shell-compatible format
+  ansible.builtin.set_fact:
+    query_execution:
+      stderr_lines:
+        - "DURATION_SECONDS={{ (_query_raw.execution_time_ms[0] / 1000) | round(2) }}"
+
+- name: Set end datetime fact
+  ansible.builtin.set_fact:
+    end_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Get number of rows returned
+  community.mysql.mysql_query:
+    login_unix_socket: "{{ socket }}"
+    login_db: "{{ db_database }}"
+    query: >
+      SELECT COUNT(*) AS cnt FROM (
+        SELECT VehicleID
+        FROM {{ db_table }}
+        WHERE GpsTime BETWEEN '2024-12-04 05:40:11' AND '2024-12-04 06:40:11'
+        GROUP BY VehicleID
+      ) sub
+  register: _rows_raw
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Register rows returned in shell-compatible format
+  ansible.builtin.set_fact:
+    query_rows_returned:
+      stdout: "{{ _rows_raw.query_result[0][0].cnt | string }}"

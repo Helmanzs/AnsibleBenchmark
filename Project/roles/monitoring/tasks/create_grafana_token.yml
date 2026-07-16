@@ -1,0 +1,116 @@
+---
+- name: Work out which environment we're provisioning a token for
+  ansible.builtin.set_fact:
+    grafana_env: "{{ deployment_env | default(inventory_file | basename) }}"
+
+- name: Look up any previously stored token for this environment
+  ansible.builtin.set_fact:
+    stored_grafana_token: "{{ (grafana_tokens | default({})).get(grafana_env, {}).get('grafana_api_token', '') }}"
+
+- name: Check whether the stored token still authenticates against Grafana
+  ansible.builtin.uri:
+    url: "http://localhost:3000/api/serviceaccounts/search?query=ansible-{{ grafana_env }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ stored_grafana_token }}"
+    status_code: [200, 401, 403]
+  register: token_check
+  when: stored_grafana_token | length > 0
+  failed_when: false
+
+- name: Decide whether we can skip regenerating a token
+  ansible.builtin.set_fact:
+    grafana_token_exists: >-
+      {{
+        stored_grafana_token | length > 0
+        and token_check is defined
+        and token_check.status | default(0) == 200
+      }}
+
+- name: Grafana token block (only runs when this env has no working token)
+  when: not grafana_token_exists
+  block:
+    - name: Look up an existing "ansible-{{ grafana_env }}" service account
+      ansible.builtin.uri:
+        url: "http://localhost:3000/api/serviceaccounts/search?query=ansible-{{ grafana_env }}"
+        method: GET
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: true
+        return_content: true
+      register: sa_search
+
+    - name: Create the "ansible-{{ grafana_env }}" service account
+      ansible.builtin.uri:
+        url: "http://localhost:3000/api/serviceaccounts"
+        method: POST
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          name: "ansible-{{ grafana_env }}"
+          role: Editor
+        status_code: [200, 201]
+      register: sa_create
+      when: (sa_search.json.serviceAccounts | default([])) | length == 0
+
+    - name: Work out the service account id
+      ansible.builtin.set_fact:
+        sa_id: >-
+          {{
+            sa_create.json.id
+            if sa_create is not skipped
+            else sa_search.json.serviceAccounts[0].id
+          }}
+
+    - name: Create a token for the service account
+      ansible.builtin.uri:
+        url: "http://localhost:3000/api/serviceaccounts/{{ sa_id }}/tokens"
+        method: POST
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          name: "ansible-token-{{ ansible_date_time.iso8601_basic_short }}"
+        status_code: 200
+      register: token_result
+
+    - name: Save a local copy of the token on the monitoring VM
+      ansible.builtin.copy:
+        dest: /etc/grafana/ansible-token
+        content: "{{ token_result.json.key }}"
+        owner: root
+        group: grafana
+        mode: "0600"
+
+    - name: Ensure the shared vars directory exists
+      ansible.builtin.file:
+        path: "{{ project_root }}/inventory/group_vars/all"
+        state: directory
+      delegate_to: localhost
+
+    - name: Merge this environment's token into the in-memory token map
+      ansible.builtin.set_fact:
+        grafana_tokens_updated: >-
+          {{
+            (grafana_tokens | default({})) | combine({
+              grafana_env: {
+                'grafana_host': ansible_host,
+                'grafana_port': grafana_port,
+                'grafana_api_token': token_result.json.key
+              }
+            })
+          }}
+
+    - name: Persist the token map so every VM/play can read it (group_vars/all)
+      ansible.builtin.copy:
+        dest: "{{ project_root }}/inventory/group_vars/all/grafana_tokens.yml"
+        content: |
+          ---
+          # Populated/rewritten by roles/monitoring/tasks/create_grafana_token.yml.
+          # Do not commit real tokens to source control.
+          {{ {'grafana_tokens': grafana_tokens_updated} | to_nice_yaml(indent=2) }}
+        mode: "0600"
+      delegate_to: localhost

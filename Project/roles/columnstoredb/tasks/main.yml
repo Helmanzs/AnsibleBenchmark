@@ -1,0 +1,6 @@
+---
+- name: Install ColumnStoreDB
+  ansible.builtin.include_tasks: "install.yml"
+
+- name: Setup database
+  ansible.builtin.include_tasks: "setup_database.yml"

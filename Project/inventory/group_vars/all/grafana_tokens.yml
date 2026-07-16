@@ -1,0 +1,12 @@
+---
+# Populated/rewritten by roles/monitoring/tasks/create_grafana_token.yml.
+# Do not commit real tokens to source control.
+grafana_tokens:
+  local:
+    grafana_api_token: glsa_0o3vDqzsp0CPsaAjYMaYlV9KbhPnJmiG_b39f72d6
+    grafana_host: 10.187.240.240
+    grafana_port: 3000
+  remote:
+    grafana_api_token: glsa_MLWiXih5P7kr9pgJBKmvVpBtgdSUebxs_b9620ec2
+    grafana_host: 10.218.114.240
+    grafana_port: 3000

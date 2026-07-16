@@ -1,0 +1,87 @@
+---
+- name: Create database
+  community.mysql.mysql_db:
+    name: "{{ db_database }}"
+    state: present
+    login_unix_socket: "{{ socket }}"
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Ensure remote root user exists with privileges
+  community.mysql.mysql_user:
+    name: root
+    host: "%"
+    password: "{{ db_password | default('') }}"
+    priv: "{{ db_database }}.*:ALL,GRANT"
+    login_unix_socket: "{{ socket }}"
+    plugin: mysql_native_password
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Create table
+  community.mysql.mysql_query:
+    login_unix_socket: "{{ socket }}"
+    login_db: "{{ db_database }}"
+    query: >
+      CREATE TABLE IF NOT EXISTS {{ db_table }} (
+        id INT NOT NULL AUTO_INCREMENT,
+        orig_id INT,
+        orig_time DATETIME,
+        orig_topic TINYTEXT,
+        CreatedTime DATETIME,
+        GpsTime DATETIME,
+        GsmSignal SMALLINT UNSIGNED,
+        SatelliteCount SMALLINT UNSIGNED,
+        LicensePlate VARCHAR(10),
+        VehicleType TINYINT UNSIGNED,
+        Company VARCHAR(10),
+        VehicleID INT UNSIGNED,
+        Technology SMALLINT UNSIGNED,
+        Ignition SMALLINT UNSIGNED,
+        Longitude DECIMAL(14, 10),
+        Latitude DECIMAL(14, 10),
+        SpeedGps DECIMAL(9, 3),
+        SpeedTach DECIMAL(9, 3),
+        SpeedCan DECIMAL(9, 3),
+        TachoGps DECIMAL(9, 3),
+        TachoTach DECIMAL(9, 3),
+        ModeDrive SMALLINT UNSIGNED,
+        SpreadingMode SMALLINT UNSIGNED,
+        Plow SMALLINT UNSIGNED,
+        Gram BIGINT UNSIGNED,
+        WidthLeft DECIMAL(9, 3),
+        WidthRight DECIMAL(9, 3),
+        SumSalt DECIMAL(18, 8) UNSIGNED,
+        SumInert DECIMAL(18, 8) UNSIGNED,
+        SumBrine DECIMAL(18, 8) UNSIGNED,
+        Cuts1 SMALLINT UNSIGNED,
+        Cuts2 SMALLINT UNSIGNED,
+        Cuts3 SMALLINT UNSIGNED,
+        CentralBroom SMALLINT UNSIGNED,
+        LeftBroom SMALLINT UNSIGNED,
+        RightBroom SMALLINT UNSIGNED,
+        Turbine SMALLINT UNSIGNED,
+        RunningShaft SMALLINT UNSIGNED,
+        LeftFlushing SMALLINT UNSIGNED,
+        RightFlushing SMALLINT UNSIGNED,
+        CentralFlushing SMALLINT UNSIGNED,
+        Misting SMALLINT UNSIGNED,
+        Pump SMALLINT UNSIGNED,
+        LightOn SMALLINT UNSIGNED,
+        ModeArrow SMALLINT UNSIGNED,
+        AkuVoltage DECIMAL(9, 3),
+        RampUp SMALLINT UNSIGNED,
+        Crash SMALLINT UNSIGNED,
+        TempAir DECIMAL(9, 3),
+        TempRoad DECIMAL(9, 3),
+        Revs DECIMAL(18, 10) UNSIGNED,
+        RevsExtension SMALLINT UNSIGNED,
+        Fuel DECIMAL(9, 3),
+        LevelPHM DECIMAL(9, 3),
+        PowerVoltage DECIMAL(9, 3),
+        Lighthouse SMALLINT UNSIGNED,
+        PRIMARY KEY (id)
+      )
+  vars:
+    ansible_python_interpreter: /usr/bin/python3

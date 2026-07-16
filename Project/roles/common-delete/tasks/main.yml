@@ -1,0 +1,7 @@
+---
+- name: Delete LXD Instance(s)
+  community.general.lxd_container:
+    name: "{{ vm_name }}"
+    state: absent
+    type: "{{ lxd_container_type | default('virtual-machine') }}"
+  delegate_to: "{{ lxd_delegate_host }}"

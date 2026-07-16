@@ -1,0 +1,10 @@
+---
+- name: Delete target LXD Instance(s)
+  hosts: "{{ target }}"
+  gather_facts: false
+  tasks:
+    - name: Delete Target LXD Instance(s)
+      ansible.builtin.include_role:
+        name: common-delete
+      vars:
+        vm_name: "{{ inventory_hostname }}"

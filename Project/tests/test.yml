@@ -1,0 +1,42 @@
+---
+- name: Start Target LXD Instance(s)
+  hosts: servers
+  roles:
+    - role: common-start
+      vars:
+        vm_name: "{{ database }}"
+
+- name: Start test {{ test_type }} for {{ database }}
+  hosts: "{{ database }}"
+  gather_facts: false
+  pre_tasks:
+    - name: Load database specific definitions
+      ansible.builtin.include_vars:
+        file: "{{ ansible_role_dir }}/{{ database }}/defaults/main.yml"
+
+    - name: Wait for SSH to become available
+      ansible.builtin.wait_for_connection:
+        timeout: "{{ lxd_ssh_timeout | default(120) }}"
+      when: ansible_connection == 'ssh'
+
+    - name: Wait for {{ database }} to be available
+      ansible.builtin.wait_for:
+        host: "{{ db_host }}"
+        port: "{{ db_port }}"
+        delay: 5
+        timeout: 60
+        connect_timeout: 10
+        state: started
+
+    - name: Gather facts manually after SSH is ready
+      ansible.builtin.setup:
+
+  tasks:
+    - name: Start {{ database }} - {{ test_type }}
+      ansible.builtin.include_tasks:
+        file: "{{ database }}/{{ test_type }}.yml"
+
+  post_tasks:
+    - name: Common Post Processing
+      ansible.builtin.include_role:
+        name: common-post-processing

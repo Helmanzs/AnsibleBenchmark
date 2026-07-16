@@ -1,0 +1,163 @@
+---
+- name: Ensure /tmp/ansible exists with correct permissions
+  ansible.builtin.file:
+    path: /tmp/ansible
+    state: directory
+    owner: root
+    group: root
+    mode: "1777"
+
+- name: Install packages
+  ansible.builtin.apt:
+    name: "{{ vm_packages }}"
+    cache_valid_time: "{{ apt_cache_valid_time_base }}"
+    state: present
+    update_cache: true
+  when: vm_packages is defined and vm_packages | length > 0
+
+- name: Download TimescaleDB GPG key
+  ansible.builtin.apt_key:
+    url: "{{ gpg_key_url }}"
+    keyring: /usr/share/keyrings/timescaledb-archive-keyring.gpg
+    state: present
+    validate_certs: yes
+
+- name: Gather distribution facts
+  ansible.builtin.setup:
+    gather_subset:
+      - distribution
+
+- name: Add TimescaleDB APT repository
+  ansible.builtin.apt_repository:
+    repo: >
+      deb [signed-by=/usr/share/keyrings/timescaledb-archive-keyring.gpg]
+      https://packagecloud.io/timescale/timescaledb/ubuntu/ {{ ansible_lsb.codename | lower }} main
+    filename: timescaledb.list
+    state: present
+    update_cache: true
+  register: repo_result
+  retries: 5
+  delay: 10
+  until: repo_result is succeeded
+
+- name: Add PostgreSQL repository
+  ansible.builtin.command:
+    cmd: /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+  changed_when: true
+
+- name: Install PostgreSQL dependencies
+  ansible.builtin.apt:
+    name: postgresql-server-dev-17
+    state: present
+    update_cache: true
+  register: postgre_result
+  retries: 5
+  delay: 10
+  until: postgre_result is succeeded
+
+- name: Install TimescaleDB
+  ansible.builtin.apt:
+    name:
+      - timescaledb-2-postgresql-17
+      - postgresql-client-17
+    state: present
+    update_cache: true
+  register: timescale_result
+  retries: 5
+  delay: 10
+  until: timescale_result is succeeded
+
+- name: Tune TimescaleDB configuration
+  ansible.builtin.command:
+    cmd: timescaledb-tune --yes
+  changed_when: true
+
+- name: Change local postgres auth method from peer to trust
+  ansible.builtin.replace:
+    path: /etc/postgresql/17/main/pg_hba.conf
+    regexp: '^local\s+all\s+postgres\s+peer'
+    replace: "local   all             postgres                                trust"
+    backup: true
+
+- name: Configure PostgreSQL authentication
+  ansible.builtin.replace:
+    path: /etc/postgresql/17/main/pg_hba.conf
+    regexp: "{{ item.regex }}"
+    replace: "{{ item.replace }}"
+    backup: true
+  loop:
+    - regex: '^local\s+all\s+all\s+peer'
+      replace: "local all all trust"
+    - regex: '^host\s+all\s+all\s+127\.0\.0\.1\/32\s+scram-sha-256'
+      replace: "host all all 127.0.0.1/32 trust"
+    - regex: '^host\s+all\s+all\s+::1\/128\s+scram-sha-256'
+      replace: "host all all ::1/128 trust"
+  loop_control:
+    label: "{{ item.regex }}"
+  tags:
+    - postgresql
+
+- name: Ensure system user '{{ db_user }}' exists
+  ansible.builtin.user:
+    name: "{{ db_user }}"
+    system: true
+    shell: /bin/bash
+
+- name: Allow '{{ db_user }}' user passwordless sudo
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/{{ db_user }}
+    content: "{{ db_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: Ensure TCP trust auth is configured
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/17/main/pg_hba.conf
+    line: "host all all 0.0.0.0/0 trust"
+    insertafter: "^# IPv4 local connections"
+    state: present
+  notify: restart postgresql
+
+- name: Configure PostgreSQL to listen on all interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/17/main/postgresql.conf
+    regexp: "^#?listen_addresses\\s*=.*"
+    line: "listen_addresses = '*'"
+    state: present
+    backup: true
+  notify: restart postgresql
+
+- name: Force timescaledb into shared_preload_libraries
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/17/main/postgresql.conf
+    regexp: '^shared_preload_libraries\s*=.*'
+    line: "shared_preload_libraries = 'timescaledb'"
+    state: present
+    backup: true
+  notify: restart postgresql
+
+- name: Ensure no override in auto.conf
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/17/main/postgresql.auto.conf
+    regexp: '^shared_preload_libraries\s*=.*'
+    state: absent
+  notify: restart postgresql
+
+- name: Restart PostgreSQL 17 main cluster
+  ansible.builtin.systemd:
+    name: postgresql@17-main
+    state: restarted
+    daemon_reload: true
+
+- name: Reload PostgreSQL configuration
+  ansible.builtin.command: pg_ctlcluster 17 main reload
+  changed_when: true
+
+- name: Install psycopg (binary)
+  ansible.builtin.pip:
+    name: "psycopg[binary]"
+    executable: pip3
+  environment:
+    PIP_BREAK_SYSTEM_PACKAGES: "1"

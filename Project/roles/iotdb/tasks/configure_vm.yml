@@ -1,0 +1,78 @@
+---
+- name: Install packages
+  ansible.builtin.apt:
+    name: "{{ vm_packages }}"
+    cache_valid_time: "{{ apt_cache_valid_time_base }}"
+    state: present
+    update_cache: true
+  when: vm_packages is defined and vm_packages | length > 0
+
+- name: Install Apache IoTDB
+  ansible.builtin.pip:
+    name: apache-iotdb
+    executable: pip3
+    extra_args: --break-system-packages
+
+- name: Disable UFW
+  ansible.builtin.service:
+    name: ufw
+    state: stopped
+    enabled: false
+
+- name: Configure sysctl parameters
+  ansible.builtin.template:
+    src: sysctl.conf.j2
+    dest: /etc/sysctl.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Apply sysctl settings
+  ansible.builtin.command:
+    cmd: sysctl --system
+
+- name: Temporarily disable and re-enable swap
+  block:
+    - name: Disable swap
+      ansible.builtin.command: swapoff -a
+      register: swapoff_result
+      changed_when: true
+      failed_when: 
+        - swapoff_result.rc != 0
+        - "'not found' not in swapoff_result.stderr"
+        - "'Operation not permitted' not in swapoff_result.stderr"
+
+    - name: Enable swap
+      ansible.builtin.command: swapon -a
+      register: swapon_result
+      changed_when: true
+      failed_when: 
+        - swapoff_result.rc != 0
+        - "'not found' not in swapoff_result.stderr"
+        - "'Operation not permitted' not in swapoff_result.stderr"
+  ignore_errors: true
+
+- name: Configure file limits
+  ansible.builtin.blockinfile:
+    path: /etc/security/limits.conf
+    block: "{{ vm_file_limits }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - FILE LIMITS"
+
+- name: Set JAVA_HOME in bashrc
+  ansible.builtin.blockinfile:
+    path: ~/.bashrc
+    block: |
+      export JAVA_HOME={{ vm_openjdk_path }}
+      export PATH=$JAVA_HOME/bin:$PATH
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - JAVA CONFIG"
+
+- name: Source bashrc
+  ansible.builtin.shell: source ~/.bashrc
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Apply network settings
+  ansible.builtin.command:
+    cmd: sysctl -p
+  changed_when: true

@@ -1,0 +1,224 @@
+% volby: 
+% male × female
+% czech (zatím funguje jen czech)
+% a studijní program / obor 
+% is_bc (nejvíc odladěno)
+% api_bc
+% api_ing
+% edu_bc
+% edu_ing
+
+\documentclass[male,czech,api_bc]{kitheses}
+\usepackage{ifthen}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{afterpage}
+\usepackage{microtype}  % přesnější typografie
+\usepackage{lipsum}   % vlastní záhlaví a zápatí
+\usepackage{changepage} % úprava okrajů pro jednotlivé stránky
+\usepackage{multirow} % sloučené buňky
+\usepackage{pgfplots} % grafy
+\usepackage{float}
+\usepackage{pgf-pie}
+\usepackage{tabularx}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+\usepackage{caption}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+
+% workaround for imcompatibility of czech babel and biblatex
+
+\iftutex
+\else
+\usepackage{etoolbox}
+\makeatletter
+\newcommand\my@hsyphen{-}
+\newcommand\my@apostroph{'}
+\patchcmd\select@language{-}{\my@hyphen}{}
+\patchcmd\select@language{'}{\my@apostroph}{}
+\makeatother
+\fi
+
+% fonty lze měnit (detaily viz sekce fonty)
+\iftutex
+\usepackage{fontspec}  % nastavení fontů pro LuaLaTeX a XeLaTeX
+\setmainfont{Libertinus Serif}
+\setsansfont{Libertinus Sans}
+\setmonofont[Scale=MatchLowercase]{Source Code Pro}
+\usepackage{unicode-math}
+\setmathfont{Libertinus Math}
+\else
+\usepackage[utf8]{inputenc} % nastavení pro PDF LaTeX
+\usepackage[T1]{fontenc}
+\usepackage{libertinus}
+\renewcommand{\ttdefault}{pxtt}
+\fi
+
+% sazba ukázek kódu 
+\usepackage{listings}
+\lstdefinelanguage{YAML}{
+  alsoletter={.},
+  keywords={true,false,null,y,n, name, state, hosts, tasks, vars, gather_facts, become, become_user, roles, ansible.builtin.yum, remote_user, ansible.builtin.service, all, ungrouped},
+  keywordstyle=\color{orange}\bfseries,
+  sensitive=false,
+  comment=[l]{\#},
+  commentstyle=\color{gray}\ttfamily,
+  stringstyle=\color{green!40!black},
+  %moredelim=[l][\color{red}]{-}, % zvýraznění "-"
+  morestring=[b]',
+  morestring=[b]",
+}
+
+\lstdefinelanguage{promql}{
+  keywords={rate,sum,by,without,increase,irate},
+  keywordstyle=\color{blue}\bfseries,
+  sensitive=true,
+  morecomment=[l]{\#},
+  alsoletter={_}
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  inputencoding=utf8,
+  extendedchars=true,
+  language=Python,
+  backgroundcolor=\color{white},
+  showspaces=false,
+  showstringspaces=true,
+  showtabs=false,
+  frame=single,
+  tabsize=3,
+  breakatwhitespace=false,
+  keywordstyle=\bfseries,
+  commentstyle=\rmfamily,
+  stringstyle=\itshape\color{green!40!black},
+}
+
+\usepackage[style=iso-numeric,shortnumeration=true]{biblatex}
+\addbibresource{thesis.bib}
+\usepackage{csquotes} % uvozovky
+
+% Nové prostředí "chart" pro grafy
+\pgfplotsset{compat=1.18}
+\newfloat{chart}{htbp}{loc}[chapter]
+\floatname{chart}{Graf}
+
+% ukázka pro nastavení balíku listings pro sazbu ukázek zdrojových kódů
+% \lstset{ %
+%   language=Python,                % the language of the code
+%   basicstyle=\small\ttfamily,    
+%   backgroundcolor=\color{white},   % choose the background color. You must add \usepackage{color}
+%   showspaces=false,                % show spaces adding particular underscores
+%   showstringspaces=true,           % underline spaces within strings
+%   showtabs=false,                  % show tabs within strings adding particular underscores
+%   frame=single,                    % adds a frame around the code
+%   tabsize=3,                       % sets default tabsize to 2 spaces
+%   breaklines=true,                 % sets automatic line breaking
+%   breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+%   keywordstyle=\bfseries,          % keyword style
+%   commentstyle=\rmfamily,       % comment style
+%   stringstyle=\itshape,   % string literal style
+% }
+\renewcommand\lstlistingname{Ukázka kódu}             % změna názvu na Ukázka kódu
+\renewcommand\lstlistlistingname{Seznam ukázek kódu}  % změna názvu na Seznam ukázek kódu
+\newcommand{\listofcharts}{\listof{chart}{Seznam grafů}}
+
+% barevné zvýraznění textů, které je nutno nahradit
+\newcommand{\ZT}[1]{\colorbox{yellow}{\color{red}{#1}}}
+
+
+% TOTO JE POTŘEBA ZMĚNIT !!!!!!
+\newcommand{\nazevcz}{Porovnání databázových systémů pro zpracování časových řad}        % zde VYPLŇTE český název práce (přesně podle zadání!)
+\newcommand{\nazeven}{Comparison of Database Systems for Time Series Processing}     % zde VYPLŇTE anglický název práce (přesně podle zadání!)
+\newcommand{\autor}{Martin Formánek}           % zde VYPLŇTE své jméno a příjmení
+\newcommand{\rok}{\the\year}                
+\newcommand{\vedouci}{Ing. Roman Vaibar, Ph.D., MBA}         
+% zde VYPLŇTE jméno a příjmení vedoucího práce, včetně titulů
+\newcommand{\vedouciDAT}{Ing. Mgr. Romanovi Vaibarovi, Ph.D., MBA}
+% zde VYPLŇTE jméno a příjmení vedoucího práce, včetně titulů ve třetím pádě
+                                                           
+
+% zvětšuje o 23% vertikální okraje v tabulkách
+\renewcommand{\arraystretch}{1.23}
+
+% nastavení pro záhlaví (co nelze udělat v cls souboru)
+
+\renewcommand{\chaptermark}[1]{\markboth{\arabic{chapter}. #1}{}}
+\pagestyle{fancy}
+
+% nastavení odkazů
+\usepackage{url} % formátování URL, příkaz \url
+\usepackage{varioref} % lepší interní odkazy na obrázky, apod. příkaz \vref
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]{hyperref} % hypertextové odkazy v PDF
+ 
+\newcommand{\UV}[1]{\quotedblbase#1\textquotedblleft}
+\newcommand\myworries[1]{\textcolor{red}{#1}}
+\newcommand{\best}[1]{\cellcolor{bestgreen}\textbf{#1}}
+
+\definecolor{bestgreen}{RGB}{198,239,206}
+\definecolor{avgblue}{RGB}{221,235,247}
+
+\usepackage{enumitem}
+
+% odstraňte pokud vám vadí absence zarovnání dole 
+\raggedbottom
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% vlastní začátek dokumentu
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fišerovo původní texty
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \include{chapters/old/uvodni_strana}
+% \include{chapters/old/zadani}
+% \include{chapters/old/prohlaseni}
+% \include{chapters/old/podekovani}
+% \include{chapters/old/abstrakt}
+% \include{chapters/old/seznamy}
+% \include{chapters/old/uvod}
+% \include{chapters/old/zakladni_cleneni}
+% \include{chapters/old/typografie}
+% \include{chapters/old/grafika}
+% \include{chapters/old/obrazky}
+% \include{chapters/old/tabulky}
+% \include{chapters/old/sazba_ukazek_kodu}
+% \include{chapters/old/grafy}
+% \include{chapters/old/citace}
+% \include{chapters/old/zhodnoceni}
+% \include{chapters/old/zaver}
+% \include{chapters/old/zdroje}
+% \include{chapters/old/prilohy}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bc. práce
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\include{chapters/uvodni_strana}
+\include{chapters/zadani}
+\include{chapters/prohlaseni}
+\include{chapters/podekovani}
+\include{chapters/abstrakt}
+\include{chapters/seznamy}
+\include{chapters/uvod}
+\include{chapters/teoreticka_cast}
+\include{chapters/prakticka_cast}
+\include{chapters/vysledky_vyzkumu_a_diskuse}
+\include{chapters/zaver}
+\include{chapters/zdroje}
+\include{chapters/prilohy}
+
+\end{document}
+

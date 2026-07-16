@@ -1,0 +1,19 @@
+galaxy_info:
+  author: Helmanz
+  description: >
+    Creates and configures LXD instances on Ubuntu 24.04.
+  license: MIT
+  min_ansible_version: "2.16"
+  namespace: helmanz
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "noble"
+
+  galaxy_tags:
+    - lxd
+    - virtualization
+    - ubuntu
+
+dependencies: []

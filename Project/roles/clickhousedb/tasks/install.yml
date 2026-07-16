@@ -1,0 +1,60 @@
+---
+- name: Install packages
+  ansible.builtin.apt:
+    name: "{{ vm_packages }}"
+    cache_valid_time: "{{ apt_cache_valid_time_base }}"
+    state: present
+    update_cache: true
+  when: vm_packages is defined and vm_packages | length > 0
+
+- name: Download GPG key
+  ansible.builtin.apt_key:
+    url: "{{ db_key_url }}"
+    keyring: "{{ keyring }}"
+    state: present
+    validate_certs: true
+
+- name: Add ClickHouse repository
+  ansible.builtin.apt_repository:
+    repo: >
+      deb [signed-by={{ keyring }} arch=amd64]
+      https://packages.clickhouse.com/deb lts main
+    filename: clickhouse
+  register: repo_result
+  retries: 10
+  delay: 10
+  until: repo_result is succeeded
+
+- name: Install ClickHouse packages
+  ansible.builtin.apt:
+    name:
+      - clickhouse-server
+      - clickhouse-client
+    state: present
+    update_cache: true
+    install_recommends: false
+    lock_timeout: 300
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  register: result
+  retries: 5
+  delay: 10
+  until: result is succeeded
+
+- name: Ensure ClickHouse listens on all interfaces
+  ansible.builtin.copy:
+    dest: /etc/clickhouse-server/config.d/listen.xml
+    content: |
+      <yandex>
+          <listen_host>0.0.0.0</listen_host>
+      </yandex>
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart ClickHouse
+
+- name: Enable and start ClickHouse service
+  ansible.builtin.service:
+    name: clickhouse-server
+    enabled: true
+    state: started

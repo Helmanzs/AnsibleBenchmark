@@ -1,0 +1,90 @@
+---
+- name: Setup LXD Instance(s)
+  hosts: servers
+  vars:
+    target_list: "{{ [target] if target is defined else groups['databases'] }}"
+  tasks:
+    - name: Check if target '{{ target }}' is valid
+      ansible.builtin.fail:
+        msg: "The target '{{ target }}' is not defined in the [databases] inventory group."
+      when: target not in groups['databases']
+
+    - name: Load database specific definitions
+      ansible.builtin.include_vars:
+        file: "{{ ansible_role_dir }}/{{ target }}/defaults/main.yml"
+
+    - name: Create LXD instance for '{{ target }}'
+      ansible.builtin.include_role:
+        name: common-create
+      vars:
+        vm_name: "{{ target }}"
+        vm_ip: "{{ hostvars[target]['ansible_host'] }}"
+
+    - name: Wait for SSH to be up
+      wait_for:
+        host: "{{ hostvars[target]['ansible_host'] }}"
+        port: 22
+        state: started
+        delay: 2
+        timeout: 30
+
+- name: Configure target database
+  hosts: "{{ target }}"
+  gather_facts: true
+  pre_tasks:
+    - name: Wait for cloud-init to complete
+      ansible.builtin.wait_for:
+        path: /var/lib/cloud/instance/boot-finished
+        timeout: 300
+        state: present
+
+    - name: Ensure Ubuntu apt sources use HTTPS instead of HTTP
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list.d/ubuntu.sources
+        regexp: '^\s*URIs:\s*http://'
+        replace: "URIs: https://"
+        backup: yes
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install packages
+      ansible.builtin.package:
+        name:
+          - python3
+          - gnupg
+          - curl
+          - python3-pip
+          - tar
+          - wget
+          - pigz
+          - sudo
+          - acpid
+          - micro
+        state: present
+
+  tasks:
+    - name: Include target database role
+      ansible.builtin.include_role:
+        name: "{{ target }}"
+
+    - name: Include node-exporter role
+      ansible.builtin.include_role:
+        name: node-exporter
+
+  post_tasks:
+    - name: Notify monitoring VM to reload Prometheus config
+      ansible.builtin.uri:
+        url: "http://{{ hostvars['grafana']['ansible_host'] }}:9090/-/reload"
+        method: POST
+        status_code: [200, 204]
+      delegate_to: "{{ lxd_delegate_host }}"
+      when: "'monitoring' in groups and groups['monitoring'] | length > 0"
+      ignore_errors: true
+
+    - name: Stop LXD Instance(s)
+      ansible.builtin.include_role:
+        name: common-stop
+      vars:
+        vm_name: "{{ target }}"

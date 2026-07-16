@@ -1,0 +1,98 @@
+---
+- name: Wait for PostgreSQL to accept connections
+  ansible.builtin.shell: |
+    for i in {1..30}; do
+      pg_isready -h /var/run/postgresql && exit 0
+      sleep 1
+    done
+    exit 1
+  changed_when: false
+
+- name: Verify timescaledb is actually preloaded
+  ansible.builtin.shell: |
+    psql -U postgres -h /var/run/postgresql -tc "SHOW shared_preload_libraries;" | grep timescaledb
+  changed_when: false
+
+- name: Ensure database exists
+  ansible.builtin.shell: |
+    psql -U postgres -h /var/run/postgresql -tc \
+      "SELECT 1 FROM pg_database WHERE datname='{{ db_database }}'" | grep -q 1 || \
+    psql -U postgres -h /var/run/postgresql -c \
+      "CREATE DATABASE {{ db_database }};"
+  register: db_create
+  changed_when: "'CREATE DATABASE' in db_create.stdout"
+
+- name: Create TimescaleDB extension
+  ansible.builtin.shell: |
+    psql -U postgres -h /var/run/postgresql -d {{ db_database }} -c \
+      "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+  register: ext_create
+  changed_when: "'CREATE EXTENSION' in ext_create.stdout"
+
+- name: Create table
+  ansible.builtin.shell: |
+    psql -U postgres -h /var/run/postgresql -d {{ db_database }} -c "
+      CREATE TABLE IF NOT EXISTS {{ db_table }} (
+        orig_id INTEGER,
+        orig_time TIMESTAMPTZ,
+        orig_topic TEXT,
+        createdtime TIMESTAMPTZ,
+        gpstime TIMESTAMPTZ NOT NULL,
+        gsmsignal SMALLINT,
+        satellitecount SMALLINT,
+        licenseplate TEXT,
+        vehicletype SMALLINT,
+        company TEXT,
+        vehicleid INTEGER,
+        technology SMALLINT,
+        ignition SMALLINT,
+        longitude DECIMAL(9,5),
+        latitude DECIMAL(8,5),
+        speedgps DECIMAL(6,2),
+        speedtach DECIMAL(6,2),
+        speedcan DECIMAL(6,2),
+        tachogps DECIMAL(6,2),
+        tachotach DECIMAL(6,2),
+        modedrive SMALLINT,
+        spreadingmode SMALLINT,
+        plow SMALLINT,
+        gram INTEGER,
+        widthleft DECIMAL(4,2),
+        widthright DECIMAL(4,2),
+        sumsalt DOUBLE PRECISION,
+        suminert DOUBLE PRECISION,
+        sumbrine DOUBLE PRECISION,
+        cuts1 SMALLINT,
+        cuts2 SMALLINT,
+        cuts3 SMALLINT,
+        centralbroom SMALLINT,
+        leftbroom SMALLINT,
+        rightbroom SMALLINT,
+        turbine SMALLINT,
+        runningshaft SMALLINT,
+        leftflushing SMALLINT,
+        rightflushing SMALLINT,
+        centralflushing SMALLINT,
+        misting SMALLINT,
+        pump SMALLINT,
+        lighton SMALLINT,
+        modearrow SMALLINT,
+        akuvoltage DECIMAL(4,2),
+        rampup SMALLINT,
+        crash SMALLINT,
+        tempair DECIMAL(6,2),
+        temproad DECIMAL(5,2),
+        revs DOUBLE PRECISION,
+        revsextension INTEGER,
+        fuel DECIMAL(6,2),
+        levelphm DECIMAL(6,2),
+        powervoltage DECIMAL(5,2),
+        lighthouse SMALLINT
+      );"
+
+- name: Convert table to hypertable
+  ansible.builtin.shell: |
+    psql -U postgres -h /var/run/postgresql -d {{ db_database }} -c \
+      "SELECT create_hypertable('{{ db_table }}', 'gpstime', if_not_exists => TRUE);"
+  register: hypertable_result
+  changed_when: "'create_hypertable' in hypertable_result.stdout"

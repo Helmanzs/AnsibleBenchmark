@@ -1,0 +1,152 @@
+---
+- name: Restart InfluxDB
+  ansible.builtin.service:
+    name: influxdb3
+    state: restarted
+  ignore_errors: true
+
+- name: Verify InfluxDB service is active
+  ansible.builtin.systemd:
+    name: influxdb3
+    state: started
+  register: influxdb_service
+  until: influxdb_service.status.ActiveState == "active"
+  retries: 10
+  delay: 1
+
+- name: Read token from environment file
+  ansible.builtin.slurp:
+    src: /root/.bashrc
+  register: bashrc
+  become: true
+
+- name: Extract token
+  ansible.builtin.set_fact:
+    influxdb_token: >-
+      {{ (bashrc.content | b64decode
+          | regex_search('INFLUXDB3_AUTH_TOKEN=(.*)', '\1')
+          | trim
+          | regex_replace('"|\[|\]|\'', '')
+        ) }}
+
+- name: Remove temp chunk directory
+  ansible.builtin.file:
+    path: "{{ temp_dir }}"
+    state: absent
+  become: true
+
+- name: Remove extracted dataset file
+  ansible.builtin.file:
+    path: "{{ import_dir }}/{{ data_file }}"
+    state: absent
+  become: true
+
+- name: Wait for InfluxDB HTTP API
+  ansible.builtin.uri:
+    url: "http://{{ db_host }}:{{ db_port }}/health"
+    headers:
+      Authorization: "Bearer {{ influxdb_token }}"
+    status_code: 200
+  register: health
+  until: health.status == 200
+  retries: 30
+  delay: 2
+
+- name: Ensure import directory exists
+  ansible.builtin.file:
+    path: "{{ import_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Copy data
+  ansible.builtin.copy:
+    src: "{{ ansible_role_dir }}/{{ vm_name }}/files/{{ data_tar }}"
+    dest: "{{ import_dir }}/{{ data_tar }}"
+    mode: "0644"
+  become: true
+
+- name: Extract data
+  ansible.builtin.shell: |
+    tar --extract --use-compress-program=pigz \
+    --file="{{ import_dir }}/{{ data_tar }}" \
+    --directory="{{ import_dir }}"
+    rm -f "{{ import_dir }}/{{ data_tar }}"
+    chmod -R 0644 "{{ import_dir }}"
+  args:
+    executable: /bin/bash
+  changed_when: true
+  become: true
+
+- name: Create chunk directory
+  ansible.builtin.file:
+    path: "{{ temp_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Split and compress file into chunks
+  ansible.builtin.shell: |
+    set -euo pipefail
+    split -l 10000 {{ import_dir }}/{{ data_file }} {{ temp_dir }}/chunk_
+    pigz -p 2 {{ temp_dir }}/chunk_*
+  args:
+    executable: /bin/bash
+  become: true
+
+- name: Set start datetime fact
+  ansible.builtin.set_fact:
+    start_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Record start time
+  ansible.builtin.command:
+    cmd: date +%s.%N
+  register: start_time
+  changed_when: false
+
+- name: Upload compressed chunks to InfluxDB 3
+  ansible.builtin.shell: |
+    bash -c '
+      find {{ temp_dir }} -name "*.gz" -print0 | \
+      xargs -0 -P2 -I{} \
+        curl --show-error --fail \
+          --request POST "http://{{ db_host }}:{{ db_port }}/api/v3/write_lp?db={{ db_database }}&precision=auto&accept_partial=false" \
+          --header "Authorization: Bearer {{ influxdb_token }}" \
+          --header "Content-Encoding: gzip" \
+          --header "Content-Type: text/plain; charset=utf-8" \
+          --data-binary @"{}"
+    '
+  register: query_execution
+  become: true
+
+- name: Record end time
+  ansible.builtin.command:
+    cmd: date +%s.%N
+  register: end_time
+  changed_when: false
+
+- name: Set end datetime fact
+  ansible.builtin.set_fact:
+    end_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Format total duration
+  ansible.builtin.set_fact:
+    total_duration_output: >-
+      DURATION_SECONDS={{ '%.2f' | format((end_time.stdout | float) - (start_time.stdout | float)) }}
+
+- name: Register total duration
+  ansible.builtin.set_fact:
+    query_execution:
+      stderr_lines: ["{{ total_duration_output }}"]
+
+- name: Remove temp chunk directory
+  ansible.builtin.file:
+    path: "{{ temp_dir }}"
+    state: absent
+  become: true
+
+- name: Remove extracted dataset file
+  ansible.builtin.file:
+    path: "{{ import_dir }}/{{ data_file }}"
+    state: absent
+  become: true

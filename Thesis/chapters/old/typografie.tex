@@ -1,0 +1,111 @@
+\chapter{Typografie}
+
+Při tvorbě bakalářské práce byste měli dodržovat základní zásady typografie. Bakalářská práce by měla být přehledná a dobře čitelná. A možná i krásná (uvědomuji si, že krása je subjektivní).
+
+\section{Písmo}
+
+Na naší katedře není předepsáno, jaké písmo by mělo být použito při sazbě práce. Měli byste však dodržovat několik zásad.
+
+\begin{itemize}
+\item pro sazbu většiny textu by mělo být použito tzv. knižní písmo tj. písmo určené
+pro sazbu soudobých knih (především odborných). Doporučit lze antikvová písma a resp. písma lineární (bezpatková).
+\item pro výpisy kódu používejte neproporcionální písmo (pro ostatní text naopak proporciální). Pro základní přehled 
+volně šiřitelných písmen se můžete podívat do dokumentu \href{https://github.com/Jiri-Fiser/thesis_ki_ujep/blob/main/monotyp%C3%A1%C5%99.pdf}{Monotypář}.
+\item pokud používáte více druhů písma, pak by měla být vizuálně kompatibilní (nejlepší je použít písma, která jako kompatibilní vytvořili či alespoň doporučili typografové)
+\end{itemize}
+
+V šabloně je využita rodina písma \textit{Libertinus} (odvozená z písma \textit{Linux Libertine}) s výjimkou neproporcionálního písmo, pro něž bylo zvoleno písmo \textit{Source Code Pro}, které podporuje výrazně větší počet řezů (kurzíva tučné).
+
+Standardní velikost písma kvalifikační práce je 12 bodů (přesněji řečeno tzv. pica bodů tj. 12/72 palce). Tato velikost však ve většině případů neodpovídá žádnému viditelnému rozměru písma (v klasické typografii je to výšky kuželky, na níž je umístěn vystouplý reliéf písma). Z  tohoto důvodů se skutečná výška a především šířka písmen může u jednotlivých písmen viditelně lišit. To je problém, pokud se znaky různých písem vyskytují vedle sebe. Často se výrazněji liší například výška antikvy a  neproporcionálního písma. V tomto případě je často nutné velikost neproporcionálních písem mírně zmenšit (tato šablona tak v případě využití XeTeXu nebo LuaTeXu činí automaticky).
+
+Optimální řádkování pro bakalářské práce je 1½ (použité i v této šabloně).
+
+\section{Základní typografická pravidla}
+
+\section{Znaky, které nenajdete na klávesnici}
+
+I v běžném textu se bohužel vyskytují znaky, které nenajdete na klávesnici.
+Jedná se především o uvozovky a pomlčky (znak \texttt{-} je spojovník nikoliv pomlčka). Ostatní znaky se v práci vyskytnou jen výjimečně.
+
+V \LaTeX{}u lze tyto znaky vkládat pomocí tří základních mechanismů:
+\begin{enumerate}
+\item příkazem
+\item pomocí sekvence speciálních znaků
+\item přímo jako Unicode znaky (v editoru)
+\end{enumerate}
+
+Následující tabulka ukazuje nejčastěji používané znaky, jež nenajdete na klávesnici, ale jejich použití je při české sazbě povinné.
+
+\begin{tabular}{lllcp{3.8cm}}
+\hline
+ & jméno znaku & \LaTeX{} makro & Unicode & popis \\ \hline
+\quotedblbase & spodní dvojité 9-uvozovky& \verb!\quotedblbase! &
+  U+201E & užívány jako úvodní uvozovky \\ 
+`` & horní dvojité 6-uvozovky& \verb!`! &
+  U+201C & užívány jako koncové uvozovky \\ 
+>> & pravé francouzské uvozovky & \verb!>>! & 
+  U+00BB & alternativní úvodní uvozovky \\
+<< & levé francouzské uvozovky & \verb!<<! & 
+  U+00AB & alternativní koncové uvozovky \\
+\quotesinglbase &  spodní jednoduché 9-uvozovky & \verb!\quotesinglbase! & 
+  U+201A  & vnořené úvodní uvozovky \\
+` &  horní jednoduché 6-uvozovky & \verb!``! & 
+  U+2018  & vnořené koncové uvozovky \\
+\ldots & výpustka & \verb!\ldots! &
+ U+2026 &  vypuštěný text \\
+--  & pomlčka & \verb!--! & 
+        & od--do, oddělovač vět \\
+\hline 
+\end{tabular}
+
+Znak tzv. obousměrných uvozovek \verb!"!, jež vznikly v době psacích strojů a přežily na počítačových klávesnicích lze využívat jen na při zápisu zdrojáků programovacích jazyků. Podobně jen ve zdrojácích lze využít trojtečku (= tři tečky). Rozdíl oproti výpustku je malý ale viditelný: 
+výpustek\ldots versus trojtečka...
+
+
+\subsection{Jednopísmenné předložky a spojky na konci řádku}
+
+Dle českých typografických pravidel je chybou použití jednopísmenných předložek a spojek na samém konci řádků. 
+Určitou výjimkou jsou spojky \enquote{a} a \enquote{i}, které jsou tolerovatelné (i když nikoliv v případě, že jsou psány velkým písmenem například na začátku věty resp. pokud následují hned za otvírací závorkou).
+
+Jediným řešením je vložení nezalomitelných mezer mezi předložku resp. spojku a následující slovo. To se může dít automaticky (v \LaTeX u se používá externí program \texttt{vlna}), ale lze to dělat i ručně (nejlépe jen  na místech, kde bylo toto pravidlo porušeno).
+
+Pozor: Toto pravidlo se týká i případů, kdy je bezprostředně před předložkou či spojkou i nějaký nepísmenný znak např. otvírací závorka či uvozovka).
+
+Striktní typografická pravidla si vynucují použití nezalomitelné mezery i na dalších místech. Pro kvalifikační práce je důležité jeho využití mezi číslem a kvantifikovanou veličinou nejčastěji fyzikální jednotkou tj, např. 42~kg nebo 256~bytů). V tomto případě nezbývá nic jiného než ruční vkládání.
+
+Nezalomitelná mezera se v \TeX{}u zapisuje znakem vlnka \texttt{\textasciitilde} (kolem znaku nesmí být žádné mezery).
+
+\subsection{Parchanti}
+
+Jako \textit{parchant} se označují případy, kdy stránka začíná posledním krátkým řádkem odstavce (tzv. sirotek), případně končí-li stránka samostatným nadpisem nebo prvním řádkem odstavce (tzv. vdova). Pozor na případy, kdy stránka začíná či končí plovoucím obrázkem či tabulkou (i za nimi či před nimi mohou být parchanti).
+
+Typografické systémy se snaží parchantům zabránit, ne vždy se jim to ale s úspěchem podaří. Pokud se to napodaří je nutné manuální řešení. Nejjednodušším bývá zkrácení či prodloužení předchozího textu. Není-li to možné, lze výjimečně vložit na vhodné místo ruční zalomení stránky (v \LaTeX{}u doporučuji příkaz \verb!clearpage!.
+
+\subsection{Vertikální a horizontální zarovnávání}
+
+Běžný text bakalářské práce by měl být zarovnán do bloku tj. jak zleva tak zprava (automatickou výjimkou jsou tzv. východové řádky odstavců, které se zarovnávají jen zleva).
+
+V \LaTeX{} je relativně časté přetečení řádků, tj. situace, kdy systém nenajde vhodné místo pro zalomení a tak řádek pokračuje i do okraje. Pokud už tato situace nastane, pak existují dvě řešení, buď změníte text na řádku (zkrátíte ho či prodloužíte) nebo pomůžete algoritmu pro dělení slov, tím že explicitně vyznačíte místa, kde může dojít k dělení pomocí příkazu \verb!\-!. Toto řešení je možné využít i v případě, že se nějaké slovo rozdělí viditelně chybně (slovo se nebude dělit v jiných než vyznačených místech).
+
+Dělení slov je jen pomocný mechanismus (nikoliv pravopisný) a tak pro něj v češtině neexistují závazná pravidla pouze úzus a doporučení. Při dělení se primárně vychází z výslovnosti nikoliv ze zápisu slov (to je klíčové především cizích slov, která se čtou podle jiných pravidel než v češtině). Pro základní orientaci stačí znát tato pravidla (aplikují se postupně):
+
+\begin{itemize}
+\item nedělí se jednoslabičná slova
+\item neoddělují se jednoznakové předpony
+pokud je jasné složení slov z morfémů (předpona, kmen, přípona) pak se dělí podle morfémů (výjimkou jsou přípony začínající samohláskou). Slovo může mít i více předpon a přípon: např. ne-pře-mosti-tel-ný.
+\item v ostatních případech se dělí podle slabik (nikoliv však mezi samohláskami!) např. fi-lo-zo-fie
+\item v případě styku dvou a více souhlásek se dělí (kdekoliv) mezi nimi s výjimkou případů, kdy toto seskupení může stát na začátku slov (např. \UV{st}, \UV{př}, \UV{str}), kdy je vhodnější dělit před skupinou hlásek např. pe-strý (i když i dělení pes-trý a pest-rý jsou možná).
+\end{itemize}
+
+Detailnější pravidla naleznete například v jazykové poradně Ústavu pro jazyk český [X], doporučená dělení pro konkrétní slova můžete nalézt například ve Wikislovníku.
+
+Pokud k vertikálnímu přetečení dochází často, je možné lokálně či globálně (tj. v tzv preambuli) dát sázecímu algoritmu více volnosti. Nejvhodnější je použití balíku \textit{microtype}, který zapíná další možnosti po vyrovnání sazby např. drobné změny v šířce písmen. Navíc se tím aktivuje tzv. optické zarovnávání (vpravo), kdy je jemně porušeno přesné zarovnání za účelem vyrovnání optického klamu (např. řádka zakončená tečkou se při přesném zarovnání jeví jako kratší). Méně vhodné, je použitá příkazu \verb!\sloppy!, které zvyšuje toleranci algoritmu. Výsledkem tak může být odstranění některých přetečení, za cenu příliš velkých mezer mezi slovy (efekt je podobný MS Wordu).
+
+Z tohoto důvodů je v šabloně bakalářské práce vložen balík  \textit{microtype}, ale příkaz \verb!\sloppy! je využit pouze v rámci seznamu literatury, kde je správné zarovnávání komplikované (především při použití dlouhých URL).
+
+\LaTeX se snaží i o vertikální zarovnání tj. udržování stejného horního a dolního okraje. Zatímco v případě horního okraje je zarovnání zcela přirozené, může zarovnání dole vést k problémům. Aby ho bylo dosaženo musí totiž LateX roztahovat tzv. pružné vertikální mezery např. mezery před a za nadpisy sekcí, před plovoucími objekty, apod.
+
+Takových míst je ale často na stránkách málo a tak se to nemusí vůbec podařit resp. se použije neakceptovatelná vertikální výplň. 
+
+Nejjednoduššší řešením je příkaz \verb!\raggedbottom!, jenž zarovnání dole vypíná. Nevznikají tak enormně velké horizontální mezery, chybějící zarovnání je však často rušivé hlavně u vedlejších
+stran u oboustranného tisku. V praxi se však ukazuje, že u závěrečných prací  je závažnějším nedostatkem nadměrné roztahování a proto je \verb!\raggedbottom! v této šabloně použit (na konci preambule), lze jej však přirozeně smazat či zakomentovat.

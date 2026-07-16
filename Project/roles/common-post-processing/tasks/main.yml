@@ -1,0 +1,109 @@
+---
+- name: Check VM config file exists
+  ansible.builtin.stat:
+    path: /etc/vm_config.json
+  register: vm_config_stat
+
+- name: Fail if VM config is missing
+  ansible.builtin.fail:
+    msg: "/etc/vm_config.json is missing."
+  when: not vm_config_stat.stat.exists
+
+- name: Read VM config file
+  ansible.builtin.slurp:
+    src: /etc/vm_config.json
+  register: vm_config_raw
+  when: vm_config_stat.stat.exists
+
+- name: Parse JSON config
+  ansible.builtin.set_fact:
+    vm_config: "{{ vm_config_raw.content | b64decode | from_json }}"
+
+- name: Get query duration
+  block:
+    - name: Get duration from stderr
+      ansible.builtin.set_fact:
+        query_duration_ms: >-
+          {{
+            (
+              query_execution.stderr_lines
+              | select("match", "^DURATION_SECONDS=")
+              | list
+              | first
+            )
+            .split("=")[1]
+            | float
+          }}
+      when: query_duration_ms is not defined and query_execution is defined
+
+    - name: Convert duration to milliseconds
+      ansible.builtin.set_fact:
+        query_duration_ms: "{{ (query_duration_ms | float) * 1000 }}"
+
+- name: Get rows read
+  ansible.builtin.set_fact:
+    rows_read: "NA"
+  when: rows_read is not defined
+
+- name: Get rows returned
+  ansible.builtin.set_fact:
+    rows_returned: "{{ query_rows_returned.stdout | string }}"
+  when: rows_returned is not defined and query_rows_returned is defined
+
+- name: Save result
+  block:
+    - name: Set local result fact on each host
+      ansible.builtin.set_fact:
+        local_result: >-
+          {{
+            {
+              'test_type': test_type,
+              'host': inventory_hostname,
+              'deployment_env': deployment_env,
+              'start_datetime': start_datetime,
+              'end_datetime': end_datetime,
+              'query_duration_ms': query_duration_ms,
+              'rows_read': rows_read | default('NA'),
+              'rows_returned': rows_returned | default('0'),
+              'ram_limit': vm_config.ram_limit | default('NA'),
+              'cpu_limit': vm_config.cpu_limit | default('NA'),
+              'profile': vm_config.profile | default('NA')
+            }
+            | combine(workers is defined | ternary({'workers': workers | int}, {}))
+            | combine(batch_size is defined | ternary({'batch_size': batch_size | int}, {}))
+            | combine(ts_step_ms is defined | ternary({'ts_step_ms': ts_step_ms | int}, {}))
+            | combine(avg_p50_latency_ms is defined | ternary({'avg_p50_latency_ms': avg_p50_latency_ms | float}, {}))
+            | combine(avg_p99_latency_ms is defined | ternary({'avg_p99_latency_ms': avg_p99_latency_ms | float}, {}))
+          }}
+
+    - name: Append this host’s result to NDJSON file
+      delegate_to: localhost
+      ansible.builtin.lineinfile:
+        path: "{{ global_results_dir | default(project_root + '/results') }}/{{ profile }}-{{ test_type }}.ndjson"
+        create: true
+        insertafter: EOF
+        line: "{{ local_result | to_json }}"
+
+    - name: Record this test run as a Grafana annotation
+      ansible.builtin.uri:
+        url: "http://{{ grafana_host }}:{{ grafana_port }}/api/annotations"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ grafana_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          time: "{{ ((start_datetime | to_datetime('%Y-%m-%dT%H:%M:%SZ')).timestamp() * 1000) | int }}"
+          timeEnd: "{{ ((end_datetime | to_datetime('%Y-%m-%dT%H:%M:%SZ')).timestamp() * 1000) | int }}"
+          tags:
+            - "{{ database }}"
+            - "{{ test_type }}"
+            - "run-{{ run | default(1) }}"
+          text: >-
+            {{ test_type }} on {{ database }}
+            (profile={{ profile | default('NA') }},
+            workers={{ workers | default('NA') }},
+            rows={{ rows_returned | default('NA') }})
+      delegate_to: "{{ lxd_delegate_host }}"
+      when: grafana_api_token is defined and grafana_api_token != ""
+      ignore_errors: true

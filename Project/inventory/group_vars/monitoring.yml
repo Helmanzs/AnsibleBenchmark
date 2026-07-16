@@ -1,0 +1,6 @@
+---
+lxd_extra_devices:
+  grafana-web:
+    type: proxy
+    listen: "tcp:0.0.0.0:{{ external_port }}"
+    connect: "tcp:{{ vm_ip }}:3000"

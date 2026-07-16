@@ -1,0 +1,19 @@
+galaxy_info:
+  author: Helmanz
+  description: >
+    Ensures the correct profiles are loaded into LXD Containers.
+  license: MIT
+  min_ansible_version: "2.16"
+  namespace: helmanz
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "noble"
+
+  galaxy_tags:
+    - lxd
+    - virtualization
+    - ubuntu
+
+dependencies: []

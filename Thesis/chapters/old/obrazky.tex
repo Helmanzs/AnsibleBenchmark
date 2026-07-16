@@ -1,0 +1,49 @@
+\chapter{Obrázky}
+
+Obrázky se vkládají pomocí prostředí \texttt{figure}. Obrázek má svůj title a odkazovací referenci. Obrázek \ref{fig:obrazek} ukazuje ukázkový obrázek.
+
+\begin{itemize}
+    \item Obrázek s názvem (pod).
+    \begin{figure}[ht]
+        \centering
+        \fbox{
+            \includegraphics[width=0.3\textwidth]{images/logo.png}
+        }
+        \caption{Ukázkový obrázek}
+        \label{fig:obrazek}
+    \end{figure}
+
+    \item Obrázek s názvem (nad).
+    \begin{figure}[ht]
+        \centering
+        \caption{Ukázkový obrázek}
+        \fbox{
+            \includegraphics[width=0.3\textwidth]{images/logo.png}
+        }
+        \label{fig:obrazek1}
+    \end{figure}
+
+    \item Obrázek s názvem (nad) a popisem (pod).
+    \begin{figure}[ht]
+        \centering
+        \caption{Latex Logo}
+        \fbox{
+            \includegraphics[width=0.3\textwidth]{images/logo.png}
+        }
+        \par\medskip
+        \text{Obrázek znázorňuje logo \LaTeX.}
+        \label{fig:obrazek2}
+    \end{figure}
+
+    \item Obrázek s názvem (nad) a popiskama (pod).
+    \begin{figure}[ht]
+        \centering
+        \fbox{
+            \includegraphics[width=0.3\textwidth]{images/logo.png}
+        }
+        \caption{Latex Logo}
+        \par\medskip
+        \text{Obrázek znázorňuje logo \LaTeX.}
+        \label{fig:obrazek3}
+    \end{figure}
+\end{itemize}

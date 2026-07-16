@@ -1,0 +1,129 @@
+\chapter{Tabulky}
+
+Tabulky jsou klíčovým prvkem vědeckých a technických textů. Správné použití tabulek v \LaTeX u vyžaduje pochopení dvou základních prostředí: \texttt{tabular} a \texttt{table}. Tato kapitola vás provede jejich syntaktickými rozdíly a ukázkami, jak efektivně formátovat tabulky.
+
+\section{Prostředí \texttt{tabular}}
+
+Prostředí \texttt{tabular} se používá k definování struktury tabulky. Umožňuje specifikovat zarovnání sloupců a přidávat vodorovné či svislé čáry.
+
+\subsection{Syntaxe}
+
+\begin{itemize}
+    \item Parametry sloupců:
+    \begin{itemize}
+        \item \texttt{c} – sloupec zarovnaný na střed,
+        \item \texttt{r} – sloupec zarovnaný doprava,
+        \item \texttt{l} – sloupec zarovnaný doleva,
+        \item \texttt{|} – svislá čára oddělující sloupce.
+    \end{itemize}
+
+    \item Oddělení buněk a řádků:
+    \begin{itemize}
+        \item \texttt{\&} – oddělení jednotlivých buněk v řádku,
+        \item \texttt{\textbackslash\textbackslash} – označení konce řádku,
+        \item \texttt{\textbackslash hline} – vložení vodorovné čáry.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Příklad}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+    \hline
+    \textbf{Záhlaví 1} & \textbf{Záhlaví 2} \\
+    \hline
+    Řádek 1 & Hodnota 1 \\
+    \hline
+    Řádek 2 & Hodnota 2 \\
+    \hline
+\end{tabular}
+\end{center}
+
+Tento příklad vytvoří tabulku se dvěma sloupci, zarovnanými na střed, s oddělujícími svislými a vodorovnými čarami.
+
+\section{Prostředí \texttt{table}}
+
+Prostředí \texttt{table} umožňuje pracovat s tabulkami jako s plovoucími objekty, což znamená, že \LaTeX\ může umístit tabulku tam, kde to považuje za vhodné. Poskytuje také možnosti přidání popisků a referencí.
+
+\subsection{Syntaxe a Příklad}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Záhlaví 1} & \textbf{Záhlaví 2} \\
+        \hline
+        Řádek 1 & Hodnota 1 \\
+        \hline
+        Řádek 2 & Hodnota 2 \\
+        \hline
+    \end{tabular}
+    \caption{Jednoduchá tabulka s popiskem}
+    \label{tab:simple_example}
+\end{table}
+
+Popisek tabulky je uveden pod tabulkou a pomocí příkazu \texttt{\textbackslash label} lze na tabulku odkazovat v textu, například: \textit{viz Tabulka \ref{tab:simple_example}}.
+
+\section{Formátování Buněk}
+
+Formátování tabulek v \LaTeX u zahrnuje sloučení buněk, definici vodorovných a svislých čar a nastavení šířek sloupců.
+
+\subsection{Sloučení buněk v řádku}
+
+Při slučování buněk v řádku se používá příkaz \texttt{\textbackslash multicolumn} (nevyžaduje balíček \texttt{multicol}!):
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Záhlaví 1} & \textbf{Záhlaví 2} & \textbf{Záhlaví 3} \\
+        \hline
+        \multicolumn{3}{|c|}{Sloučené buňky} \\
+        \hline
+        Hodnota 1 & Hodnota 2 & Hodnota 3 \\
+        \hline
+    \end{tabular}
+    \caption{Ukázka sloučení buněk v řádku}
+    \label{tab:merged_row}
+\end{table}
+
+\newpage
+
+\subsection{Sloučení buněk ve sloupci}
+
+Pro sloučení buněk ve sloupci se používá příkaz \texttt{\textbackslash multirow} (vyžaduje balíček \texttt{multirow}):
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Záhlaví 1} & \textbf{Záhlaví 2} & \textbf{Záhlaví 3} \\
+        \hline
+        \multirow{2}{*}{Sloučené} & Hodnota 1 & Hodnota 2 \\
+        & Hodnota 3 & Hodnota 4 \\
+        \hline
+    \end{tabular}
+    \caption{Ukázka sloučení buněk ve sloupci}
+    \label{tab:merged_column}
+\end{table}
+
+\subsection{Kombinace sloučení buněk}
+
+Můžete také kombinovat sloučení buněk v řádku i sloupci:
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Záhlaví 1} & \textbf{Záhlaví 2} & \textbf{Záhlaví 3} \\
+        \hline
+        \multicolumn{2}{|c|}{\multirow{2}{*}{Kombinace}} & Hodnota 1 \\
+        \cline{3-3}
+        \multicolumn{2}{|c|}{} & Hodnota 2 \\
+        \hline
+        Hodnota 3 & Hodnota 4 & Hodnota 5 \\
+        \hline
+    \end{tabular}
+    \caption{Ukázka kombinovaného sloučení}
+    \label{tab:combined_merge}
+\end{table}

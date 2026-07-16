@@ -1,0 +1,24 @@
+galaxy_info:
+  author: Helmanz
+  description: >
+    Installs and configures InfluxDB on LXD-based virtual machines.
+    Designed for Ubuntu 24.04 images deployed via LXD using the Simplestreams image server.
+  license: MIT
+  min_ansible_version: "2.16"
+  namespace: helmanz
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "noble"
+
+  galaxy_tags:
+    - influxdb
+    - database
+    - analytics
+    - lxd
+    - virtualization
+    - ubuntu
+    - monitoring
+
+dependencies: []

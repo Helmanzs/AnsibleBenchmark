@@ -1,0 +1,16 @@
+\chapter{Úvod}
+Časové řady představují jeden z~nejběžnějších typů dat, se kterými se v~praxi setkáváme. 
+Ať se jedná o~senzorová měření, metriky výkonu softwarových systémů, finanční ukazatele nebo data o~pohybu vozidel, ve všech případech jde o~posloupnosti hodnot uspořádané v~čase, jejichž efektivní ukládání a~analýza má zásadní vliv na schopnost organizace rozhodovat se na základě reálných dat. 
+S~rostoucím množstvím připojených zařízení, senzorů a~monitorovaných systémů roste i~objem generovaných časových dat, což klade stále vyšší nároky na databázové systémy, které je mají ukládat a~zpracovávat.
+
+V~minulosti se pro ukládání časových řad nejčastěji využívaly tradiční relační databáze, které ovšem nejsou na specifický charakter tohoto typu dat primárně optimalizované. 
+V~posledních letech proto vznikla celá řada specializovaných databázových systémů, takzvaných time-series databází, které se snaží lépe reflektovat vlastnosti časových řad, jako je vysoká frekvence zápisu, potřeba efektivní agregace dat v~čase nebo nutnost dlouhodobé archivace velkých objemů dat. 
+Zároveň se v~praxi stále využívají i~sloupcové databáze a~relační databáze rozšířené o~podporu časových řad, takže výběr vhodného systému není jednoduchý a~závisí na konkrétním případu použití.
+
+Cílem této bakalářské práce je porovnat vybrané databázové systémy z~hlediska jejich vhodnosti pro zpracování a~ukládání časových řad, a~to jak z~teoretického hlediska architektury a~vnitřních datových struktur, tak i~z~hlediska praktického výkonu při~konkrétních operacích, jako je zápis, čtení a~agregace dat. 
+Pro účely srovnání bude vytvořeno automatizované testovací prostředí, ve kterém budou jednotlivé systémy nasazeny za srovnatelných podmínek a~podrobeny sadě definovaných testů.
+
+Práce je rozdělena do dvou hlavních částí. Teoretická část se nejprve věnuje charakteristice časových řad a~způsobům jejich ukládání, dále popisuje rozdíly mezi jednotlivými typy databázových systémů a~jejich vnitřními datovými strukturami. 
+Následně je čtenář seznámen s~nástroji a~technologiemi použitými pro automatizaci a~monitorování testovacího prostředí, konkrétně s~nástrojem Ansible pro automatizaci konfigurace a~s~nástroji Prometheus a~Grafana pro sběr a~vizualizaci metrik. 
+Praktická část se pak zaměřuje na popis použitého datasetu, návrh a~implementaci testovacího scénáře, samotnou konfiguraci testovaného prostředí a~vyhodnocení dosažených výsledků.
+Výstupem práce by mělo být nejen porovnání konkrétních databázových systémů na konkrétním datasetu, ale i~obecnější doporučení, na základě jakých kritérií by měl být databázový systém pro zpracování časových řad vybírán v~závislosti na požadavcích konkrétního projektu.

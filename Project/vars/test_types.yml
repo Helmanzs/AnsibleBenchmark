@@ -1,0 +1,6 @@
+test_types:
+  - insert
+  - single_point
+  - condition
+  - aggregate
+  - live_insert

@@ -1,0 +1,60 @@
+---
+- name: Set query facts
+  ansible.builtin.set_fact:
+    vehicle_id: "186"
+    target_timestamp: "2024-12-02T17:52:54Z"
+
+- name: Read token from environment file
+  ansible.builtin.slurp:
+    src: /root/.bashrc
+  register: bashrc
+  become: true
+
+- name: Extract token
+  ansible.builtin.set_fact:
+    influxdb_token: >-
+      {{ (bashrc.content | b64decode
+          | regex_search('INFLUXDB3_AUTH_TOKEN=(.*)', '\1')
+          | trim
+          | regex_replace('"|\[|\]|\'', '')
+        ) }}
+
+- name: Set start datetime fact
+  ansible.builtin.set_fact:
+    start_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Perform indexed lookup
+  ansible.builtin.shell: |
+    /usr/bin/time -f "DURATION_SECONDS=%e" \
+    /opt/influxdb3/influxdb3 query \
+      --database {{ db_database }} \
+      --format csv \
+      "SELECT * FROM {{ db_table }} \
+      WHERE \"VehicleID\" = '{{ vehicle_id }}' \
+      AND time >= '{{ target_timestamp }}' \
+      AND time <= '2024-12-02T17:52:54.999Z'"
+  environment:
+    INFLUXDB3_AUTH_TOKEN: "{{ influxdb_token }}"
+  register: query_execution
+  changed_when: false
+  become: true
+
+- name: Set end datetime fact
+  ansible.builtin.set_fact:
+    end_datetime: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Get number of rows returned
+  ansible.builtin.shell: |
+    /opt/influxdb3/influxdb3 query \
+      --database {{ db_database }} \
+      --format csv \
+      "SELECT COUNT(*) AS cnt FROM {{ db_table }} \
+      WHERE \"VehicleID\" = '{{ vehicle_id }}' \
+      AND time >= '{{ target_timestamp }}' \
+      AND time <= '2024-12-02T17:52:54.999Z'" \
+    | sed -n '2p'
+  environment:
+    INFLUXDB3_AUTH_TOKEN: "{{ influxdb_token }}"
+  register: query_rows_returned
+  changed_when: false
+  become: true

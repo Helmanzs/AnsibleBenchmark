@@ -1,0 +1,164 @@
+---
+- name: Get ram
+  ansible.builtin.set_fact:
+    total_ram: "{{ ram_limit | regex_replace('[^0-9]', '') | int | default(2) }}"
+
+- name: Calculate heap size
+  ansible.builtin.set_fact:
+    confignode_heap: >-
+      {% set heap = ((total_ram | int) * 0.2) | int %}
+      {% if heap < 1 %}
+        1
+      {% elif heap > 2 %}
+        2
+      {% else %}
+        {{ heap }}
+      {% endif %}
+
+    datanode_heap: >-
+      {% set heap =((total_ram | int) * 0.4) | int %}
+      {% if heap < 2 %}
+        2
+      {% elif heap > 8 %}
+        8
+      {% else %}
+        {{ heap }}
+      {% endif %}
+
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - { path: "/data/iotdb" }
+    - { path: "/iotdb/" }
+
+- name: Download IoTDB Archive
+  ansible.builtin.get_url:
+    url: "{{ db_zip_url }}"
+    dest: "/tmp/iotdb-download.zip"
+    timeout: 600 
+    mode: '0644'
+  register: download_result
+  until: download_result is succeeded
+  retries: 3
+  delay: 10
+
+- name: Extract IoTDB
+  ansible.builtin.unarchive:
+    src: "/tmp/iotdb-download.zip"
+    dest: /tmp/
+    remote_src: true
+    mode: "0755"
+
+- name: Move IoTDB
+  ansible.builtin.shell: |
+    mv /tmp/apache-iotdb*/** /iotdb/
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Configure ConfigNode memory
+  ansible.builtin.lineinfile:
+    path: /iotdb/conf/confignode-env.sh
+    line: 'MAX_HEAP_SIZE="{{ confignode_heap }}"'
+    state: present
+
+- name: Configure DataNode memory
+  ansible.builtin.lineinfile:
+    path: /iotdb/conf/datanode-env.sh
+    line: 'MAX_HEAP_SIZE="{{ datanode_heap }}"'
+    state: present
+
+- name: Set cluster_name
+  ansible.builtin.replace:
+    path: /iotdb/conf/iotdb-system.properties
+    regexp: '^cluster_name=.*'
+    replace: 'cluster_name={{ iotdb_cluster_name }}'
+
+- name: Set cn_internal_address
+  ansible.builtin.replace:
+    path: /iotdb/conf/iotdb-system.properties
+    regexp: '^cn_internal_address=.*'
+    replace: 'cn_internal_address={{ iotdb_cn_internal_address }}'
+
+- name: Set dn_rpc_address
+  ansible.builtin.replace:
+    path: /iotdb/conf/iotdb-system.properties
+    regexp: '^dn_rpc_address=.*'
+    replace: 'dn_rpc_address={{ iotdb_dn_rpc_address }}'
+
+- name: Set dn_internal_address
+  ansible.builtin.replace:
+    path: /iotdb/conf/iotdb-system.properties
+    regexp: '^dn_internal_address=.*'
+    replace: 'dn_internal_address={{ iotdb_dn_internal_address }}'
+
+- name: Enable REST API and set address/port
+  ansible.builtin.lineinfile:
+    path: /iotdb/conf/iotdb-system.properties
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    create: false
+  loop:
+    - { key: "enable_rest_service", value: "true" }
+    - { key: "rest_service_address", value: "0.0.0.0" }
+    - { key: "rest_service_port", value: "18080" }
+  notify: restart datanode
+
+- name: Ensure remote binding addresses are 0.0.0.0
+  ansible.builtin.lineinfile:
+    path: /iotdb/conf/iotdb-system.properties
+    regexp: "^{{ item }}="
+    line: "{{ item }}=0.0.0.0"
+  loop:
+    - dn_rpc_address
+    - dn_internal_address
+    - cn_internal_address
+  notify: restart confignode
+
+- name: Create systemd service for ConfigNode
+  ansible.builtin.template:
+    src: confignode.service.j2
+    dest: /etc/systemd/system/confignode.service
+    mode: "0600"
+
+- name: Create systemd service for DataNode
+  ansible.builtin.template:
+    src: datanode.service.j2
+    dest: /etc/systemd/system/datanode.service
+    mode: "0600"
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start ConfigNode service
+  ansible.builtin.systemd:
+    name: confignode.service
+    enabled: true
+    state: started
+
+- name: Enable and start DataNode service
+  ansible.builtin.systemd:
+    name: datanode.service
+    enabled: true
+    state: started
+
+- name: Wait for IoTDB RPC service to be available
+  ansible.builtin.wait_for:
+    host: "{{ db_host }}"
+    port: "{{ db_port }}"
+    delay: 5
+    timeout: 60
+
+- name: Flush handlers to restart services immediately
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for REST API to be available
+  ansible.builtin.wait_for:
+    host: "{{ db_host }}"
+    port: 18080
+    delay: 5
+    timeout: 60
