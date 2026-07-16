@@ -1,0 +1,39 @@
+all:
+  children:
+    lxd_containers:
+      vars:
+        ansible_connection: ssh
+        lxd_delegate_host: localhost
+        ansible_user: root
+      children:
+        databases:
+          hosts:
+            mariadb:
+              ansible_host: 10.187.240.2
+            questdb:
+              ansible_host: 10.187.240.3
+            influxdb:
+              ansible_host: 10.187.240.4
+            iotdb:
+              ansible_host: 10.187.240.5
+            clickhousedb:
+              ansible_host: 10.187.240.6
+            timescaledb:
+              ansible_host: 10.187.240.7
+            columnstoredb:
+              ansible_host: 10.187.240.8
+            mongodb:
+              ansible_host: 10.187.240.9
+
+        monitoring:
+          hosts:
+            grafana:
+              ansible_host: 10.187.240.240
+
+    servers:
+      vars:
+        external_port: 3000
+      hosts:
+        localhost:
+          ansible_host: localhost
+          ansible_connection: local

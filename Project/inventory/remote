@@ -1,0 +1,39 @@
+all:
+  children:
+    lxd_containers:
+      vars:
+        ansible_ssh_common_args: "-o ProxyJump=formanekm@192.168.27.54"
+        lxd_delegate_host: dcuk
+        ansible_user: root
+      children:
+        databases:
+          hosts:
+            mariadb:
+              ansible_host: 10.218.114.2
+            questdb:
+              ansible_host: 10.218.114.3
+            influxdb:
+              ansible_host: 10.218.114.4
+            iotdb:
+              ansible_host: 10.218.114.5
+            clickhousedb:
+              ansible_host: 10.218.114.6
+            timescaledb:
+              ansible_host: 10.218.114.7
+            columnstoredb:
+              ansible_host: 10.218.114.8
+            mongodb:
+              ansible_host: 10.218.114.9
+
+        monitoring:
+          hosts:
+            grafana:
+              ansible_host: 10.218.114.240
+
+    servers:
+      vars:
+        external_port: 3001
+        ansible_user: formanekm
+      hosts:
+        dcuk:
+          ansible_host: 192.168.27.54
