@@ -1,4 +1,4 @@
-\chapter{Výsledky výzkumu a~diskuse}
+\chapter{Výsledky výzkumu a~diskuse}\label{vysledky}
 Tato kapitola prezentuje výsledky provedeného experimentálního vyhodnocení a~následně je interpretuje z~hlediska praktické použitelnosti jednotlivých databázových systémů. 
 
 Nejprve je popsán způsob zpracování a~agregace naměřených hodnot, poté jsou diskutovány výsledky výkonnostních testů, licenční omezení a~možnosti škálování jednotlivých řešení.
@@ -32,18 +32,18 @@ získává 100 bodů a~nejsložitější 1 bod.
 \caption{Instalační a~konfigurační náročnost databázových systémů}
 \label{tab:install-complexity}
 
-\begin{tabular}{l>{}c@{}}
+\begin{tabular}{l>{}cc@{}}
 \toprule
-\textbf{DBMS} & \textbf{Ansible úlohy} \\
+\textbf{DBMS} & \textbf{Ansible úlohy} & \textbf{Normalizované skore} \\
 \midrule
-ClickHouse           & 9  \\
-MongoDB              & 11 \\
-QuestDB              & 11 \\
-InfluxDB 3           & 13 \\
-MariaDB              & 22 \\
-MariaDB ColumnStore  & 22 \\
-TimescaleDB          & 28 \\
-Apache IoTDB         & 36 \\
+ClickHouse           & \best{9} & \best{100.00} \\
+MongoDB              & 11 & 92.67\\
+QuestDB              & 11 & 92.67\\
+InfluxDB 3           & 13 & 85.33\\
+MariaDB              & 22 & 52.33\\
+MariaDB ColumnStore  & 22 & 52.33\\
+TimescaleDB          & 28 & 30.33\\
+Apache IoTDB         & \worst{36} & \worst{1.00} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -110,9 +110,9 @@ TimescaleDB & 71.71 & 57.57 & 71.71 & 71.71 & 68.17 \\
 InfluxDB 3 & 29.29 & \best{100.00} & 85.86 & 43.43 & 64.64 \\
 QuestDB & 43.43 & 43.43 & 57.57 & 85.86 & 57.57 \\
 MariaDB ColumnStore & 85.86 & 29.29 & 29.29 & 57.57 & 50.50 \\
-Apache IoTDB & 1.00 & 71.71 & 43.43 & 29.29 & 36.36 \\
+Apache IoTDB & \worst{1.00} & 71.71 & 43.43 & 29.29 & 36.36 \\
 MariaDB & 57.57 & 15.14 & 15.14 & 15.14 & 25.75 \\
-MongoDB & 15.14 & 1.00 & 1.00 & 1.00 & 4.54 \\
+MongoDB & 15.14 & \worst{1.00} & \worst{1.00} & \worst{1.00} & \worst{4.54} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -127,7 +127,7 @@ Zajímavé je extrémní propadnutí MongoDB, které ve všech testech kromě
     \centering
     \includegraphics[width=0.7\textwidth]{images/small_aggregate.png}
     \caption{Medián doby trvání dotazu \texttt{aggregate} na profilu 
-             \texttt{small}.}
+             \texttt{small} (zdroj: Vlastní zpracování)}
     \label{fig:small_aggregate}
 \end{figure}
 
@@ -141,7 +141,7 @@ CPU a~paměti MongoDB na samotném začátku testu \texttt{aggregate}.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{images/mongodb_small_aggregate.png}
-    \caption{Začátek měření CPU a~RAM pro test \texttt{aggregate} u~MongoDB.}
+    \caption{Měření CPU a~RAM pro test \texttt{aggregate} u~MongoDB (zdroj: Vlastní zpracování)}
     \label{fig:mongodb_small_aggregate}
 \end{figure}
 
@@ -170,12 +170,12 @@ Následující tabulka prezentuje naměřenou propustnost při kontinuálním vk
 \midrule
 ClickHouse & 9634 & 9984 & \best{11225} & \best{14022} & \best{14034} & \best{13302} & \best{13887} & \best{13152} & \best{10517} & \best{\textbf{12195}} \\
 TimescaleDB & \best{11177} & \best{10969} & 10802 & 11452 & 11644 & 11472 & 11442 & 11785 & 9741 & \textbf{11165} \\
-MariaDB & 10016 & 9920 & 9764 & 9851 & 9993 & 9420 & 9765 & 9591 & -- & \textbf{8702} \\
+MariaDB & 10016 & 9920 & 9764 & 9851 & 9993 & 9420 & 9765 & 9591 & \worst{--} & \textbf{8702} \\
 MongoDB & 8409 & 8161 & 8033 & 9015 & 8684 & 8299 & 8571 & 8543 & 7550 & \textbf{8363} \\
 Apache IoTDB & 6343 & 5843 & 5535 & 8854 & 8031 & 7936 & 9155 & 7896 & 5718 & \textbf{7257} \\
-InfluxDB 3 & 6856 & 6816 & 6723 & 6891 & 6835 & 6897 & 6757 & 6656 & 5591 & \textbf{6669} \\
-QuestDB & 5925 & 5918 & 5847 & 7093 & 6548 & 5941 & 7310 & 5899 & 4423 & \textbf{6100} \\
-MariaDB ColumnStore & 1100 & 1062 & 1030 & 3277 & 3131 & 2764 & 7415 & 5744 & -- & \textbf{3190} \\
+InfluxDB 3 & 6856 & 6816 & 6723 & 6891 & 6835 & 6897 & \worst{6757} & 6656 & 5591 & \textbf{6669} \\
+QuestDB & 5925 & 5918 & 5847 & 7093 & 6548 & 5941 & 7310 & 5899 &  4423 & \textbf{6100} \\
+MariaDB ColumnStore & \worst{1100} & \worst{1062} & \worst{1030} & \worst{3277} & \worst{3131} & \worst{2764} & 7415 & \worst{5744} & \worst{--} & \worst{\textbf{3190}} \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -209,9 +209,9 @@ TimescaleDB & 71.71 & 43.43 & 71.71 & 71.71 & \textbf{64.64} \\
 InfluxDB 3 & 29.29 & \best{100.00} & 85.86 & 43.43 & \textbf{64.64} \\
 QuestDB & 43.43 & 57.57 & 43.43 & 85.86 & \textbf{57.57} \\
 MariaDB ColumnStore & 85.86 & 29.29 & 29.29 & 57.57 & \textbf{50.50} \\
-Apache IoTDB & 1.00 & 71.71 & 57.57 & 29.29 & \textbf{39.89} \\
+Apache IoTDB & \worst{1.00} & 71.71 & 57.57 & 29.29 & \textbf{39.89} \\
 MariaDB & 57.57 & 15.14 & 15.14 & 15.14 & \textbf{25.75} \\
-MongoDB & 15.14 & 1.00 & 1.00 & 1.00 & \textbf{4.54} \\
+MongoDB & 15.14 & \worst{1.00} & \worst{1.00} & \worst{1.00} & \worst{\textbf{4.54}} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -226,7 +226,7 @@ Je 3$\times$ pomalejší než druhý nejhorší systém v~tomto typu testu, Mong
     \centering
     \includegraphics[width=0.9\textwidth]{images/medium_insert.png}
     \caption{Medián doby trvání dotazu \texttt{insert} na profilu 
-             \texttt{medium}.}
+             \texttt{medium} (zdroj: Vlastní zpracování)}
     \label{fig:medium_insert}
 \end{figure}
 
@@ -244,7 +244,7 @@ Zelená křivka reprezentuje vytížení procesoru, žlutá využití operační
     \centering
     \includegraphics[width=1\textwidth]{images/iotdb-medium-cpu.png}
     \caption{Vytížení CPU a~paměti Apache IoTDB během testu 
-             \texttt{insert} na profilu \texttt{medium}.}
+             \texttt{insert} na profilu \texttt{medium} (zdroj: Vlastní zpracování)}
     \label{fig:iotdb-medium-cpu}
 \end{figure}
 
@@ -280,7 +280,7 @@ MongoDB & 16187 & 15809 & 15596 & 17284 & 16972 & 16627 & 16888 & 16569 & 16362 
 Apache IoTDB & 13513 & 12267 & 11785 & 18031 & 17280 & 16084 & 18164 & 17770 & 15494 & \textbf{15599} \\
 QuestDB & 11706 & 11972 & 11770 & 14805 & 14666 & 14158 & 16285 & 15450 & 14577 & \textbf{13932} \\
 InfluxDB 3 & 13066 & 12899 & 13070 & 13243 & 12942 & 13090 & 12852 & 12493 & 12828 & \textbf{12943} \\
-MariaDB ColumnStore & 1210 & 1288 & 1174 & 3613 & 3588 & 3423 & 10435 & 9414 & 8163 & \textbf{4701} \\
+MariaDB ColumnStore & \worst{1210} & \worst{1288} & \worst{1174} & \worst{3613} & \worst{3588} & \worst{3423} & \worst{10435} & \worst{9414} & \worst{8163} & \worst{\textbf{4701}} \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -311,9 +311,9 @@ QuestDB & 43.43 & 57.57 & 57.57 & 85.86 & \textbf{61.11} \\
 InfluxDB 3 & 29.29 & \best{100.00} & 85.86 & 29.29 & \textbf{61.11} \\
 TimescaleDB & 71.71 & 43.43 & 43.43 & 71.71 & \textbf{57.57} \\
 MariaDB ColumnStore & 85.86 & 29.29 & 29.29 & 57.57 & \textbf{50.50} \\
-Apache IoTDB & 1.00 & 71.71 & 71.71 & 43.43 & \textbf{46.96} \\
+Apache IoTDB & \worst{1.00} & 71.71 & 71.71 & 43.43 & \textbf{46.96} \\
 MariaDB & 57.57 & 15.14 & 15.14 & 15.14 & \textbf{25.75} \\
-MongoDB & 15.14 & 1.00 & 1.00 & 1.00 & \textbf{4.54} \\
+MongoDB & 15.14 & \worst{1.00} & \worst{1.00} & \worst{1.00} & \worst{\textbf{4.54}} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -348,7 +348,7 @@ Apache IoTDB & 17597 & 27147 & 25885 & 21346 & 34807 & 33635 & 21776 & 36187 & 3
 MongoDB & 16856 & 30901 & 30401 & 17849 & 31529 & 31780 & 17467 & 31090 & 31254 & \textbf{26570} \\
 QuestDB & 22258 & 27852 & 27150 & 21400 & 29497 & 28972 & 19504 & 31296 & 30519 & \textbf{26494} \\
 InfluxDB 3 & 13617 & 24324 & 24248 & 13454 & 24479 & 24319 & 13257 & 23968 & 23681 & \textbf{20594} \\
-MariaDB ColumnStore & 1329 & 1372 & 1333 & 3626 & 3619 & 3624 & 11789 & 11844 & 10611 & \textbf{5461} \\
+MariaDB ColumnStore & \worst{1329} & \worst{1372} & \worst{1333} & \worst{3626} & \worst{3619} & \worst{3624} & \worst{11789} & \worst{11844} & \worst{10611} & \worst{\textbf{5461}} \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -428,7 +428,7 @@ InfluxDB 3           & 21400  & 32850  & 32750  & 0,7$\times$ \\
 QuestDB              & 12760  & 14060  & 14250  & 0,9$\times$ \\
 MariaDB              & 6975   & 9100   & 9200   & 0,8$\times$ \\
 MariaDB ColumnStore  & 5370   & 3610   & 2630   & \best{2,0$\times$} \\
-Apache IoTDB         & 108210 & 177830 & 182090 & 0,6$\times$ \\
+Apache IoTDB         & 108210 & 177830 & 182090 & \worst{0,6$\times$} \\
 MongoDB              & 71940  & 56600  & 43320  & 1,7$\times$ \\
 \bottomrule
 \end{tabular}}
@@ -450,7 +450,7 @@ TimescaleDB          & 48,4  & 50,0  & 50,0  & 1,0$\times$ \\
 InfluxDB 3           & 29,3  & 20,0  & 20,0  & 1,5$\times$ \\
 QuestDB              & 60,0  & 50,0  & 50,0  & 1,2$\times$ \\
 MariaDB              & 390,0 & 240,0 & 240,0 & \best{1,6$\times$} \\
-MariaDB ColumnStore  & 106,9 & 130,0 & 140,0 & 0,8$\times$ \\
+MariaDB ColumnStore  & 106,9 & 130,0 & 140,0 & \worst{0,8$\times$} \\
 Apache IoTDB         & 44,0  & 43,0  & 40,0  & 1,1$\times$ \\
 MongoDB              & 991,3 & 950,0 & 910,0 & 1,1$\times$ \\
 \bottomrule
@@ -473,7 +473,7 @@ TimescaleDB          & 48,6  & 50,0  & 50,0  & 1,0$\times$ \\
 InfluxDB 3           & 48,4  & 40,0  & 40,0  & 1,2$\times$ \\
 QuestDB              & 58,6  & 60,0  & 50,0  & 1,2$\times$ \\
 MariaDB              & 413,8 & 270,0 & 270,0 & \best{1,5$\times$} \\
-MariaDB ColumnStore  & 78,5  & 90,0  & 90,0  & 0,9$\times$ \\
+MariaDB ColumnStore  & 78,5  & 90,0  & 90,0  & \worst{0,9$\times$} \\
 Apache IoTDB         & 60,2  & 52,0  & 44,0  & 1,4$\times$ \\
 MongoDB              & 869,0 & 880,0 & 820,0 & 1,1$\times$ \\
 \bottomrule
@@ -496,7 +496,7 @@ TimescaleDB          & 44,0  & 50,0  & 50,0  & 0,9$\times$ \\
 InfluxDB 3           & 156,0 & 130,0 & 140,0 & 1,1$\times$ \\
 QuestDB              & 38,8  & 40,0  & 40,0  & 1,0$\times$ \\
 MariaDB              & 411,8 & 270,0 & 280,0 & \best{1,5$\times$} \\
-MariaDB ColumnStore  & 77,0  & 90,0  & 100,0 & 0,8$\times$ \\
+MariaDB ColumnStore  & 77,0  & 90,0  & 100,0 & \worst{0,8$\times$} \\
 Apache IoTDB         & 200,3 & 165,0 & 139,0 & 1,4$\times$ \\
 MongoDB              & 1033,7& 930,0 & 930,0 & 1,1$\times$ \\
 \bottomrule
@@ -554,7 +554,7 @@ TimescaleDB          & +102,7\,\% & +65,8\,\%  & +236,0\,\% \\
 InfluxDB 3           & +94,1\,\%  & +59,1\,\%  & +208,8\,\% \\
 QuestDB              & +128,4\,\% & +90,2\,\%  & \best{+334,3\,\%} \\
 MariaDB              & +113,6\,\% & +58,6\,\%  & +238,8\,\% \\
-MariaDB ColumnStore  & +47,4\,\%  & +16,2\,\%  & +71,2\,\%  \\
+MariaDB ColumnStore  & +47,4\,\%  & +16,2\,\%  & \worst{+71,2\,\%}  \\
 Apache IoTDB         & +115,0\,\% & +80,4\,\%  & +287,7\,\% \\
 MongoDB              & +97,0\,\%  & +61,3\,\%  & +217,7\,\% \\
 \bottomrule
@@ -598,9 +598,9 @@ TimescaleDB          & 63,46 & 23\,772 & 30,33 & Apache 2.0 & pouze čtecí repl
 InfluxDB 3           & 63,46 & 13\,402 & 85,33 & Apache 2.0 / MIT & pouze Enterprise \\
 QuestDB              & 58,75 & 15\,509 & 92,67 & Apache 2.0 (OSS) & pouze Enterprise \\
 MariaDB              & 25,75 & 18\,924 & 52,33 & GPLv2 & replikace / Galera Cluster \\
-MariaDB ColumnStore  & 50,50 & 4\,451 & 52,33 & GPLv2 & nativní \\
-Apache IoTDB         & 41,07 & 16\,997 & 1,00 & Apache 2.0 & nativní \\
-MongoDB              & 4,54 & 17\,137 & 92,67 & SSPL & nativní \\
+MariaDB ColumnStore  & 50,50 & \worst{4\,451} & 52,33 & GPLv2 & nativní \\
+Apache IoTDB         & 41,07 & 16\,997 & \worst{1,00} & Apache 2.0 & nativní \\
+MongoDB              & \worst{4,54} & 17\,137 & 92,67 & SSPL & nativní \\
 \bottomrule
 \end{tabular}}
 \end{table}

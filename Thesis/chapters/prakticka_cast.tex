@@ -1,4 +1,4 @@
-\chapter{Praktická část}
+\chapter{Praktická část}\label{practical}
 
 \section{Popis dat}\label{sec:popisdat}
 
@@ -6,8 +6,8 @@ Poskytovatelem dat je Datové centrum Ústeckého kraje (DCÚK), které spravuje
 Jedná se o~záznamy ze systému pro sledování pohybu vozidel správy a~údržby silnic. 
 
 Samotný dataset má velikost přibližně 650 MB a~obsahuje zhruba 600 tisíc záznamů. Data jsou uložena v~tabulkové struktuře ve formátu CSV.
-Obsahuje celkem 54 atributů různých datových typů. Převládají celočíselné a~desetinné hodnoty, které reprezentují měřené nebo stavové veličiny, dále textové atributy sloužící především jako identifikátory a~časové údaje. 
-Struktura dat je převážně plochá, přičemž každý řádek představuje jeden záznam o~stavu vozidla v~konkrétním časovém okamžiku.
+Obsahuje celkem 54 atributů různých datových typů. Převládají celočíselné (int) a~desetinné čísla (float), které reprezentují měřené nebo stavové veličiny, dále textové atributy (text) sloužící především jako identifikátory a~časové údaje (timestamp). 
+Struktura dat je plochá, přičemž každý řádek představuje jeden záznam o~stavu vozidla v~konkrétním časovém okamžiku.
 
 Tyto informace umožňují analýzu pohybu vozidel v~čase a~prostoru, například pro vyhodnocení efektivity údržby silniční sítě nebo sledování tras jednotlivých vozidel.
 
@@ -113,7 +113,7 @@ Je optimalizována pro vysokou rychlost zápisu a~práci s~časovými intervaly,
 \cite{influxdbdocs}
 
 InfluxDB nyní využívá hlavně jazyk SQL, v~minulosti ovšem ale využíval vlastní dotazovací jazyky InfluxQL a~následně Flux. V~nejnovějších verzích podpora pro Flux už není.
-Kromě toho je dostupný také HTTP API\footnote{\textit{API} - Application Programming Interface, rozhraní, přes které spolu komunikují různé aplikace.} přístup. 
+Kromě toho je dostupný také HTTP API přístup. 
 \cite{influxdbdocs}
 
 Nejnovější verze InfluxDB 3 je postavena na tzv. FDAP stacku\footnote{\textit{FDAP} - Flight, DataFusion, Arrow, Parquet, sada open-source komponent Apache Software Foundation, které tvoří jádro systému.}, což umožňuje zaměřit vývoj na časově specifické funkce místo reinplementace nízkoúrovňových databázových komponent. \cite{influxdbdocs}
@@ -237,7 +237,7 @@ QuestDB podporuje standardní SQL rozšířený o~časové funkce.
 Pro vysokorychlostní ingestování je k~dispozici protokol InfluxDB Line Protocol, zatímco pro dotazování implementuje PostgreSQL wire protocol, což umožňuje připojení standardními PostgreSQL klienty bez nutnosti speciálních ovladačů. 
 K~dispozici je také REST API a~vestavěná webová konzole.
 
-QuestDB je dostupný jako open-source projekt pod licencí Apache License 2.0 a dále i jako QuestDB Enterprise. Ta disponuje funkcemi, které přidávjí možnost replikace dat, automatického zálohování, horizontální škálování, a podporu úložiště nad objektovým storage (např. S3, Azure Blob Storage nebo GCS).
+QuestDB je dostupný jako open-source projekt pod licencí Apache License 2.0 a dále i jako QuestDB Enterprise. Ta disponuje funkcemi, které přidávají možnost replikace dat, automatického zálohování, horizontální škálování, a podporu úložiště nad objektovým storage (např. S3, Azure Blob Storage nebo GCS).
 
 \subsection{TimescaleDB}
 
@@ -262,8 +262,8 @@ Dále existuje i TimescaleDB Enterprise, která oproti open-source edici poskytu
 \cite{timescaledbdocs}
 
 \section{Návrh testovacího scénáře}
-V~následujících odstavcích popíši~realizace a~návrhy testovacího prostředí, které jsem využil pro porovnání jednotlivých databázových systémů.
-V~mém prostředí chci zadefinovat co nejbližší jednotné prostředí, jako jsou například stejná data a~stejné HW prostředky.
+Následují odstavce popisují~realizace a~návrh testovacího prostředí, které bylo využito pro porovnání jednotlivých databázových systémů.
+V~rámci testovacího prostředí je definováno co nejvíce sjednocené prostředí, jako například stejná data a~stejné HW prostředky.
 To budu realizovat pomocí orchestrace založené na Ansible. 
 Monitoring běhu jednotlivých kontejnerů je založen na systému Prometheus a~sesbíraná HW data budou vizualizována pomocí nástroje Grafana.
 
@@ -703,7 +703,7 @@ Bez ohledu na typ testu je posledním krokem každého běhu role \texttt{common
     \item a~zapíše odpovídající anotaci do Grafany (\texttt{/api/annotations}), čímž se testovací okno zpětně promítne do grafů systémových metrik sbíraných Prometheem.
 \end{itemize}
 
-Tímto způsobem vznikne za všechny databáze a~všechny opakované běhy jednotná sada pěti NDJSON(Newline Delimited JSON) souborů (\texttt{insert}, \texttt{single\_point}, \texttt{condition}, \texttt{aggregate}, \texttt{live\_insert}), která slouží jako vstupní data pro následnou analýzu výsledků.
+Tímto způsobem vznikne za všechny databáze a~všechny opakované běhy jednotná sada pěti NDJSON (Newline Delimited JSON) souborů (\texttt{insert}, \texttt{single\_point}, \texttt{condition}, \texttt{aggregate}, \texttt{live\_insert}), která slouží jako vstupní data pro následnou analýzu výsledků.
 
 Ze všech testů se sbírají metriky dvojím způsobem:
 \begin{itemize}

@@ -5,7 +5,7 @@
 Práce se zabývá porovnáním databázových systémů vhodných pro ukládání a~zpracování časových řad. 
 Teoretická část charakterizuje časové řady, popisuje přístupy k~jejich ukládání a~shrnuje rozdíly mezi relačními, dokumentovými, sloupcovými a~specializovanými time-series databázemi.
 Praktická část porovnává osm systémů (ClickHouse, TimescaleDB, InfluxDB 3, QuestDB, Apache IoTDB, MariaDB, MariaDB ColumnStore a~MongoDB) na reálném datasetu poskytnutém Datovým centrem Ústeckého kraje. 
-Pro účely testování bylo pomocí nástroje Ansible vytvořeno automatizované a~reprodukovatelné testovací prostředí s~monitoringem přes Prometheus a~Grafanu. 
+Pro účely testování bylo pomocí nástroje Ansible vytvořeno automatizované a~reprodukovatelné testovací prostředí s~monitoringem přes softwarové nástroje Prometheus a~Grafanu. 
 Systémy byly vyhodnoceny z~hlediska výkonnosti při~zápisu, čtení a~agregaci dat, složitosti instalace a~konfigurace, licenčních podmínek a~možností škálování, na jejichž základě práce formuluje doporučení pro výběr vhodného databázového systému.
 
 \textbf{Klíčová slova:} databázové systémy, časové řady, benchmarking, automatizace testování
@@ -20,7 +20,7 @@ Systémy byly vyhodnoceny z~hlediska výkonnosti při~zápisu, čtení a~agregac
 This thesis compares database systems suitable for storing and processing time series data.
 \mbox{The~theoretical} part characterizes time series, describes common storage approaches, and summarizes the differences between relational, document, columnar, and specialized time-series databases.
 The~practical part compares eight systems (ClickHouse, TimescaleDB, InfluxDB 3, QuestDB, Apache IoTDB, MariaDB, MariaDB ColumnStore, and MongoDB) using a real-world dataset provided by the Datové Centrum Ústeckého Kraje.
-An automated and reproducible testing environment was built with Ansible, with monitoring handled by Prometheus and Grafana. 
+An automated and reproducible testing environment was built with Ansible, with monitoring handled by software tools Prometheus and Grafana. 
 The systems were evaluated in terms of write, read, and aggregation performance, installation and configuration complexity, licensing conditions, and scaling options, forming the basis for a recommendation on selecting a suitable database system.
 
 \textbf{Keywords:} database systems, time series, benchmarking, test automation
